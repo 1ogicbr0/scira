@@ -10,6 +10,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState, useRedu
 // Third-party library imports
 import { useChat, UseChatOptions } from '@ai-sdk/react';
 import { Crown } from '@phosphor-icons/react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { parseAsString, useQueryState } from 'nuqs';
 import { toast } from 'sonner';
@@ -24,6 +25,7 @@ import Messages from '@/components/messages';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import FormComponent from '@/components/ui/form-component';
+import { SourcesPanel } from '@/components/sources-panel';
 
 // Hook imports
 import { useAutoResume } from '@/hooks/use-auto-resume';
@@ -66,24 +68,24 @@ const ChatInterface = memo(
     const [q] = useQueryState('q', parseAsString.withDefault(''));
 
     // Use localStorage hook directly for model selection with a default
-    const [selectedModel, setSelectedModel] = useLocalStorage('scira-selected-model', 'scira-default');
-    const [selectedGroup, setSelectedGroup] = useLocalStorage<SearchGroupId>('scira-selected-group', 'web');
+    const [selectedModel, setSelectedModel] = useState<string>('ola-4.1-mini'); // Use a non-authenticated model by default
+    const [selectedGroup, setSelectedGroup] = useLocalStorage<SearchGroupId>('ola-selected-group', 'web');
     const [isCustomInstructionsEnabled, setIsCustomInstructionsEnabled] = useLocalStorage(
-      'scira-custom-instructions-enabled',
+      'ola-custom-instructions-enabled',
       true,
     );
 
     // Get persisted values for dialog states
     const [persistedHasShownUpgradeDialog, setPersitedHasShownUpgradeDialog] = useLocalStorage(
-      'scira-upgrade-prompt-shown',
+      'ola-upgrade-prompt-shown',
       false,
     );
     const [persistedHasShownSignInPrompt, setPersitedHasShownSignInPrompt] = useLocalStorage(
-      'scira-signin-prompt-shown',
+      'ola-signin-prompt-shown',
       false,
     );
     const [persistedHasShownAnnouncementDialog, setPersitedHasShownAnnouncementDialog] = useLocalStorage(
-      'scira-announcement-prompt-shown',
+      'ola-announcement-prompt-shown',
       false,
     );
 
@@ -217,9 +219,11 @@ const ChatInterface = memo(
       () => ({
         id: chatId,
         api: '/api/search',
-        experimental_throttle: selectedModel === 'scira-anthropic' ? 1000 : 100,
+        experimental_throttle: selectedModel === 'ola-anthropic' ? 1000 : 100,
         sendExtraMessageFields: true,
         maxSteps: 5,
+        retryCount: 3,
+        retryInterval: 1000,
         body: {
           id: chatId,
           model: selectedModel,
@@ -228,6 +232,12 @@ const ChatInterface = memo(
           ...(initialChatId ? { chat_id: initialChatId } : {}),
           selectedVisibilityType: chatState.selectedVisibilityType,
           isCustomInstructionsEnabled: isCustomInstructionsEnabled,
+        },
+        onResponse: (response: Response) => {
+          // If we get a response, clear any previous error state
+          if (response.ok) {
+            return;
+          }
         },
         onFinish: async (message, { finishReason }) => {
           console.log('[finish reason]:', finishReason);
@@ -258,21 +268,38 @@ const ChatInterface = memo(
             }, 1000);
           }
 
-          // Only generate suggested questions if authenticated user or private chat
-          if (
-            message.content &&
-            (finishReason === 'stop' || finishReason === 'length') &&
-            (user || chatState.selectedVisibilityType === 'private')
-          ) {
-            const newHistory = [
-              { role: 'user', content: lastSubmittedQueryRef.current },
-              { role: 'assistant', content: message.content },
-            ];
-            const { questions } = await suggestQuestions(newHistory);
-            dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: questions });
-          }
+          // Note: Suggested questions are now generated automatically via API data stream
+          // The useEffect above handles the 'suggested-questions' data stream events
         },
         onError: (error) => {
+          // Ignore connection errors and retry silently
+          if (error instanceof Error && 
+              (error.name === 'AggregateError' || 
+               error.message?.includes('connection') || 
+               error.message?.includes('network'))) {
+            console.log('Retrying due to connection error:', error);
+            return;
+          }
+
+          // Enhanced error logging
+          console.log('=== Chat Error Debug Info ===');
+          console.log('Error object:', {
+            name: error.name,
+            message: error.message,
+            cause: error.cause,
+            type: error instanceof ChatSDKError ? error.type : 'unknown',
+            surface: error instanceof ChatSDKError ? error.surface : 'unknown',
+            stack: error.stack
+          });
+          console.log('Current chat state:', {
+            model: selectedModel,
+            group: selectedGroup,
+            chatId,
+            messageCount: messages.length,
+            isAuthenticated: !!user
+          });
+          console.log('========================');
+
           // Don't show toast for ChatSDK errors as they will be handled by the enhanced error display
           if (error instanceof ChatSDKError) {
             console.log('ChatSDK Error:', error.type, error.surface, error.message);
@@ -340,6 +367,18 @@ const ChatInterface = memo(
       }
     }, [status]);
 
+            // Handle data stream events for suggested questions (kept for compatibility)
+    useEffect(() => {
+      if (data && Array.isArray(data)) {
+        data.forEach((item) => {
+          if (item.type === 'suggested-questions' && item.questions) {
+            console.log('Received suggested questions from stream:', item.questions);
+            dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: item.questions });
+          }
+        });
+      }
+    }, [data]);
+
     useEffect(() => {
       if (user && status === 'streaming' && messages.length > 0) {
         console.log('[chatId]:', chatId);
@@ -399,6 +438,46 @@ const ChatInterface = memo(
         dispatch({ type: 'RESET_SUGGESTED_QUESTIONS' });
       }
     }, [status]);
+
+    // Generate suggested questions when AI response is complete
+    useEffect(() => {
+      const generateQuestionsAfterResponse = async () => {
+        // Only generate if status is ready (response complete), we have messages, no current questions, and proper visibility
+        if (
+          status === 'ready' &&
+          messages.length >= 2 &&
+          !chatState.suggestedQuestions.length &&
+          (user || chatState.selectedVisibilityType === 'private')
+        ) {
+          // Get the last user and assistant messages
+          const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+          const lastAssistantMessage = messages.filter(m => m.role === 'assistant').pop();
+
+          // Only generate if we have both a user message and assistant response
+          if (lastUserMessage && lastAssistantMessage) {
+            try {
+              console.log('🔄 Generating suggested questions on client side...');
+              const conversationHistory = [
+                { role: 'user', content: lastUserMessage.content },
+                { role: 'assistant', content: lastAssistantMessage.content }
+              ];
+              
+              const { questions } = await suggestQuestions(conversationHistory);
+              console.log('✅ Client-side generated questions:', questions);
+              
+              if (questions && questions.length > 0) {
+                dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: questions });
+                console.log('✅ Dispatched questions to state');
+              }
+            } catch (error) {
+              console.error('Error generating suggested questions on client:', error);
+            }
+          }
+        }
+      };
+
+      generateQuestionsAfterResponse();
+    }, [status, messages.length, chatState.suggestedQuestions.length, user, chatState.selectedVisibilityType]);
 
     const lastUserMessageIndex = useMemo(() => {
       for (let i = messages.length - 1; i >= 0; i--) {
@@ -500,23 +579,43 @@ const ChatInterface = memo(
       [chatId],
     );
 
+    const [sourcesOpen, setSourcesOpen] = useState(false);
+    const [sources, setSources] = useState<Array<{ url: string; title: string; text?: string; favicon?: string }>>([]);
+    const [userClosedSources, setUserClosedSources] = useState(false);
+    const [lastAutoOpenedMessageId, setLastAutoOpenedMessageId] = useState<string | null>(null);
+
+    // Auto-open sources panel when research starts
+    useEffect(() => {
+      if (status === 'streaming' || status === 'submitted') {
+        if (!userClosedSources) {
+          setSourcesOpen(true);
+        }
+        // Reset the user closed flag for new searches (when a new message starts streaming)
+        if (status === 'submitted') {
+          setUserClosedSources(false);
+        }
+      }
+    }, [status, userClosedSources]);
+
     return (
       <div className="flex flex-col font-sans! items-center min-h-screen bg-background text-foreground transition-all duration-500 w-full overflow-x-hidden !scrollbar-thin !scrollbar-thumb-muted-foreground dark:!scrollbar-thumb-muted-foreground !scrollbar-track-transparent hover:!scrollbar-thumb-foreground dark:!hover:scrollbar-thumb-foreground">
-        <Navbar
-          isDialogOpen={chatState.anyDialogOpen}
-          chatId={initialChatId || (messages.length > 0 ? chatId : null)}
-          selectedVisibilityType={chatState.selectedVisibilityType}
-          onVisibilityChange={handleVisibilityChange}
-          status={status}
-          user={user}
-          onHistoryClick={() => dispatch({ type: 'SET_COMMAND_DIALOG_OPEN', payload: true })}
-          isOwner={isOwner}
-          subscriptionData={subscriptionData}
-          isProUser={isUserPro}
-          isProStatusLoading={proStatusLoading}
-          isCustomInstructionsEnabled={isCustomInstructionsEnabled}
-          setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
-        />
+        <div className={cn('w-full transition-all duration-300 ease-in-out', sourcesOpen ? 'sm:mr-[500px] md:mr-[600px]' : '')}>
+          <Navbar
+            isDialogOpen={chatState.anyDialogOpen}
+            chatId={initialChatId || (messages.length > 0 ? chatId : null)}
+            selectedVisibilityType={chatState.selectedVisibilityType}
+            onVisibilityChange={handleVisibilityChange}
+            status={status}
+            user={user}
+            onHistoryClick={() => dispatch({ type: 'SET_COMMAND_DIALOG_OPEN', payload: true })}
+            isOwner={isOwner}
+            subscriptionData={subscriptionData}
+            isProUser={isUserPro}
+            isProStatusLoading={proStatusLoading}
+            isCustomInstructionsEnabled={isCustomInstructionsEnabled}
+            setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
+          />
+        </div>
 
         {/* Chat Dialogs Component */}
         <ChatDialogs
@@ -548,18 +647,32 @@ const ChatInterface = memo(
         />
 
         <div
-          className={`w-full p-2 sm:p-4 ${
+          className={cn(
+            'w-full p-2 sm:p-4 transition-all duration-300 ease-in-out',
             status === 'ready' && messages.length === 0
               ? 'min-h-screen! flex! flex-col! items-center! justify-center!' // Center everything when no messages
-              : 'mt-20! sm:mt-16! flex flex-col!' // Add top margin when showing messages
-          }`}
+              : 'mt-20! sm:mt-16! flex flex-col!', // Add top margin when showing messages
+            sourcesOpen ? 'sm:mr-[500px] md:mr-[600px]' : '' // Push content left when sources panel is open (desktop only)
+          )}
         >
           <div className={`w-full max-w-[95%] sm:max-w-2xl space-y-6 p-0 mx-auto transition-all duration-300`}>
             {status === 'ready' && messages.length === 0 && (
               <div className="text-center m-0 mb-2">
-                <h1 className="text-3xl sm:text-5xl !mb-0 text-foreground dark:text-foreground font-be-vietnam-pro! font-light tracking-tighter">
-                  scira
-                </h1>
+                <div className="flex items-center justify-center gap-3 mb-5">
+                  <Image
+                    src="/ola.png"
+                    alt="Ola"
+                    className="w-7 h-7 sm:w-11 sm:h-11 invert dark:invert-0"
+                    width={100}
+                    height={100}
+                    unoptimized
+                    quality={100}
+                    priority
+                  />
+                  <h1 className="text-3xl sm:text-5xl !mb-0 text-foreground dark:text-foreground font-be-vietnam-pro! font-light tracking-tighter">
+                    ola
+                  </h1>
+                </div>
               </div>
             )}
 
@@ -625,21 +738,84 @@ const ChatInterface = memo(
                 onVisibilityChange={handleVisibilityChange}
                 initialMessages={initialMessages}
                 isOwner={isOwner}
+                onSourcesClick={(sources, forceOpen = false, messageId = null) => {
+                  setSources(sources);
+                  
+                  if (forceOpen) {
+                    // Manual click - always open and reset user closed flag
+                    setSourcesOpen(true);
+                    setUserClosedSources(false);
+                  } else if (messageId && messageId !== lastAutoOpenedMessageId && !userClosedSources) {
+                    // Auto-open only if: not previously auto-opened for this message AND user hasn't manually closed
+                    setSourcesOpen(true);
+                    setLastAutoOpenedMessageId(messageId);
+                  }
+                }}
               />
             )}
 
             <div ref={bottomRef} />
           </div>
 
+          {/* Sources Panel */}
+          <SourcesPanel 
+            sources={sources} 
+            open={sourcesOpen} 
+            onOpenChange={(open) => {
+              setSourcesOpen(open);
+              // Track when user manually closes the panel
+              if (!open) {
+                setUserClosedSources(true);
+              }
+            }}
+            isSearching={status === 'streaming' || status === 'submitted'}
+            searchQuery={(() => {
+              // Get the last user message as the search query
+              const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+              return lastUserMessage?.content || input || '';
+            })()}
+            currentStage={(() => {
+              if (status === 'streaming' || status === 'submitted') {
+                // Check if we have tool invocations running
+                const lastMessage = messages[messages.length - 1];
+                const hasActiveTools = lastMessage?.parts?.some((part: any) => 
+                  part.type === 'tool-invocation' && part.toolInvocation?.state !== 'result'
+                );
+                
+                // Searching: Initial phase, tools starting, no sources yet
+                if (hasActiveTools && sources.length === 0) return 'searching';
+                
+                // Reading: Tools are actively running and finding/processing sources
+                if (hasActiveTools && sources.length > 0) return 'reading';
+                
+                // Wrapping up: Research tools are complete, but AI is still writing the final response
+                if (!hasActiveTools && status === 'streaming' && sources.length > 0) return 'wrapping';
+                
+                // Default to searching if we're still in submitted state
+                return 'searching';
+              }
+              
+              // Completed: Everything is done including suggested questions
+              if (sources.length > 0 && chatState.suggestedQuestions.length > 0) {
+                return 'Completed';
+              }
+              // If we have sources but no suggested questions yet, still wrapping up
+              return sources.length > 0 ? 'wrapping' : 'searching';
+            })()}
+          />
+
           {/* Single Form Component with dynamic positioning */}
           {((user && isOwner) || !initialChatId || (!user && chatState.selectedVisibilityType === 'private')) &&
             !isLimitBlocked && (
               <div
                 className={cn(
-                  'transition-all duration-500 w-full max-w-[95%] sm:max-w-2xl mx-auto',
+                  'transition-all duration-300 w-full max-w-[95%] sm:max-w-2xl mx-auto',
                   messages.length === 0 && !chatState.hasSubmitted
                     ? 'relative' // Centered position when no messages
-                    : 'fixed bottom-6 sm:bottom-4 left-0 right-0 z-20', // Fixed bottom when messages exist
+                    : cn(
+                        'fixed bottom-6 sm:bottom-4 left-0 z-20',
+                        sourcesOpen ? 'right-[500px] sm:right-[600px]' : 'right-0'
+                      ), // Fixed bottom when messages exist, adjusted for sources panel
                 )}
               >
                 <FormComponent

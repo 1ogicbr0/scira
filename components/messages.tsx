@@ -37,13 +37,14 @@ interface MessagesProps {
   onVisibilityChange?: (visibility: 'public' | 'private') => void; // Add visibility change handler
   initialMessages?: any[]; // Add initial messages prop to detect existing chat
   isOwner?: boolean; // Add ownership prop
+  onSourcesClick?: (sources: Array<{ url: string; title: string; text?: string }>, forceOpen?: boolean, messageId?: string | null) => void; // Add sources click handler
 }
 
-const SciraLogoHeader = () => (
+const OlaLogoHeader = () => (
   <div className="flex items-center gap-2 my-1.5">
     <Image
-      src="/scira.png"
-      alt="Scira"
+      src="/ola.png"
+      alt="Ola"
       className="size-7 invert dark:invert-0"
       width={100}
       height={100}
@@ -51,7 +52,7 @@ const SciraLogoHeader = () => (
       quality={100}
       priority
     />
-    <h2 className="text-xl font-normal font-be-vietnam-pro text-foreground dark:text-foreground">Scira</h2>
+    <h2 className="text-xl font-normal font-be-vietnam-pro text-foreground dark:text-foreground">ola</h2>
   </div>
 );
 
@@ -72,6 +73,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
     onVisibilityChange,
     initialMessages,
     isOwner,
+    onSourcesClick,
   }) => {
     // Track visibility state for each reasoning section using messageIndex-partIndex as key
     const [reasoningVisibilityMap, setReasoningVisibilityMap] = useState<Record<string, boolean>>({});
@@ -210,7 +212,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
                 key={`${messageIndex}-${partIndex}-loading`}
                 className="flex flex-col min-h-[calc(100vh-18rem)] !m-0 !p-0"
               >
-                <SciraLogoHeader />
+                <OlaLogoHeader />
                 <div className="flex space-x-2 ml-8 mt-2">
                   <div
                     className="w-2 h-2 rounded-full bg-muted-foreground dark:bg-muted-foreground animate-bounce"
@@ -385,7 +387,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
               // Render logo and title for the first step-start
               return (
                 <div key={`${messageIndex}-${partIndex}-step-start-logo`}>
-                  <SciraLogoHeader />
+                  <OlaLogoHeader />
                 </div>
               );
             }
@@ -398,6 +400,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
                 key={`${messageIndex}-${partIndex}-tool`}
                 toolInvocations={[part.toolInvocation]}
                 annotations={message.annotations}
+                onSourcesClick={onSourcesClick}
               />
             );
           default:
@@ -507,6 +510,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
                   isMissingAssistantResponse={isMissingAssistantResponse}
                   handleRetry={handleRetry}
                   isOwner={isOwner}
+                  onSourcesClick={onSourcesClick}
                 />
               </div>
             );
@@ -517,7 +521,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
         {status === 'submitted' && !hasActiveToolInvocations && (
           <div className="flex items-start min-h-[calc(100vh-18rem)] !m-0 !p-0">
             <div className="w-full !m-0 !p-0">
-              <SciraLogoHeader />
+              <OlaLogoHeader />
               <div className="flex space-x-2 ml-8 mt-2">
                 <div
                   className="w-2 h-2 rounded-full bg-muted-foreground dark:bg-muted-foreground animate-bounce"
@@ -540,7 +544,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
         {isMissingAssistantResponse && (
           <div className="flex items-start min-h-[calc(100vh-18rem)]">
             <div className="w-full">
-              <SciraLogoHeader />
+              <OlaLogoHeader />
 
               <div className="bg-secondary/30 dark:bg-secondary/20 border border-secondary dark:border-secondary rounded-lg p-4 mb-4 max-w-2xl">
                 <div className="flex items-start gap-3">

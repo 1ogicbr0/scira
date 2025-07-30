@@ -1,4 +1,4 @@
--- Critical Performance Indexes for scira
+-- Critical Performance Indexes for ola
 -- Using correct database column names from schema
 
 -- 1. MESSAGE USAGE - Most critical (user_id + date range queries)

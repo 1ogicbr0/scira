@@ -730,14 +730,47 @@ const ExtremeSourcesSheet: React.FC<{
 const ExtremeSearchComponent = ({
   toolInvocation,
   annotations,
+  onSourcesClick,
 }: {
   toolInvocation: ToolInvocation;
   annotations?: JSONValue[];
+  onSourcesClick?: (sources: Array<{ url: string; title: string; text?: string }>, forceOpen?: boolean, messageId?: string | null) => void;
 }) => {
   const { state } = toolInvocation;
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [previousItemsLength, setPreviousItemsLength] = useState(0);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to handle Research Process click
+  const handleResearchProcessClick = () => {
+    if (onSourcesClick && state === 'result') {
+      const { result } = toolInvocation;
+      const researchData = result as { research: Research } | null;
+      const research = researchData?.research;
+      
+      // Deduplicate sources based on URL
+      const uniqueSources = Array.from(
+        new Map(
+          (research?.sources || []).map((s: any) => [
+            s.url,
+            {
+              url: s.url,
+              title: s.title,
+              text: s.text,
+              favicon: s.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(s.url).hostname)}`,
+            },
+          ]),
+        ).values(),
+      );
+      
+      if (uniqueSources.length > 0) {
+        onSourcesClick(uniqueSources, true);
+      }
+    } else {
+      // Fallback to old behavior if no onSourcesClick is provided
+      setResearchProcessOpen(!researchProcessOpen);
+    }
+  };
 
   // Add state for accordion sections (default to closed for more compact view)
   const [researchProcessOpen, setResearchProcessOpen] = useState(false);
@@ -1490,7 +1523,7 @@ const ExtremeSearchComponent = ({
         <Card className="w-full mx-auto gap-0 py-0 mb-3 shadow-none overflow-hidden">
           <div
             className="py-2 px-3 border-b bg-neutral-50 dark:bg-neutral-900 flex justify-between items-center cursor-pointer"
-            onClick={() => setResearchProcessOpen(!researchProcessOpen)}
+            onClick={handleResearchProcessClick}
           >
             <div className="text-xs font-medium text-neutral-800 dark:text-neutral-200 truncate">Research Process</div>
             {researchProcessOpen ? (
@@ -1545,7 +1578,7 @@ const ExtremeSearchComponent = ({
         )}
 
         {/* Then show the sources view */}
-        {renderSources(uniqueSources)}
+        {/* {renderSources(uniqueSources)} */}
 
         {/* Sources Sheet */}
         <ExtremeSourcesSheet sources={uniqueSources} open={sourcesSheetOpen} onOpenChange={setSourcesSheetOpen} />

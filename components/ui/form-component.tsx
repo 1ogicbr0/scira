@@ -1872,7 +1872,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
           {/* Form container */}
           <div className="relative">
-            <div className="rounded-xl bg-muted border border-border focus-within:border-ring transition-colors duration-200">
+            <div className="relative rounded-xl bg-muted border-2 focus-within:border-slate-300 focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.3)] border-slate-400 focus-within:animate-pulse group">
               {isRecording ? (
                 <Textarea
                   ref={inputRef}

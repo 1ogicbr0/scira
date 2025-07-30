@@ -8,4 +8,4 @@ export const PRICING = {
   PRO_MONTHLY: 15, // Pro plan monthly price in USD
 } as const;
 
-export const SNAPSHOT_NAME = 'scira-analysis:1752127473';
+export const SNAPSHOT_NAME = 'ola-analysis:1752127473';

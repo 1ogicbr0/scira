@@ -115,7 +115,7 @@ export default function AboutPage() {
               <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
                 <ShieldCheck className="h-4 w-4" />
                 <span className="text-sm font-medium">
-                  Scira is not connected to any cryptocurrency tokens or coins. We are purely an AI search engine.
+                  Ola is not connected to any cryptocurrency tokens or coins. We are purely an AI search engine.
                 </span>
               </div>
               <button
@@ -152,7 +152,7 @@ export default function AboutPage() {
                 Terms of Service
               </h3>
               <p className="text-xs text-muted-foreground">
-                By using Scira, you agree to our Terms of Service which outline the rules for using our platform. This
+                By using Ola, you agree to our Terms of Service which outline the rules for using our platform. This
                 includes guidelines on acceptable use, intellectual property rights, and limitations of liability.
               </p>
               <Link href="/terms" className="text-xs text-primary hover:underline inline-flex items-center">
@@ -204,14 +204,14 @@ export default function AboutPage() {
         <div className="container max-w-screen-xl mx-auto py-4 px-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/scira.png"
-              alt="Scira"
+              src="/ola.png"
+              alt="Ola"
               width={100}
               height={100}
               className="size-7 invert dark:invert-0"
               quality={100}
             />
-            <span className="font-normal font-be-vietnam-pro">Scira</span>
+            <span className="font-normal font-be-vietnam-pro">Ola</span>
           </Link>
 
           <nav className="flex items-center gap-8">
@@ -228,7 +228,7 @@ export default function AboutPage() {
               Privacy
             </Link>
             <Link
-              href="https://git.new/scira"
+              href="https://git.new/ola"
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               target="_blank"
               rel="noopener noreferrer"
@@ -249,7 +249,7 @@ export default function AboutPage() {
               <Link href="/" className="inline-flex items-center gap-2 group">
                 <div className="relative">
                   <Image
-                    src="/scira.png"
+                    src="/ola.png"
                     alt="Scira"
                     width={100}
                     height={100}
@@ -257,7 +257,7 @@ export default function AboutPage() {
                     quality={100}
                   />
                 </div>
-                <span className="text-5xl font-light tracking-tight font-be-vietname-pro">scira</span>
+                <span className="text-5xl font-light tracking-tight font-be-vietname-pro">ola</span>
               </Link>
 
               <div className="space-y-5">
@@ -387,7 +387,7 @@ export default function AboutPage() {
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-medium tracking-tight">RAG & Search Grounding</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Scira combines RAG and search grounding to deliver accurate, up-to-date answers from reliable sources.
+                Ola combines RAG and search grounding to deliver accurate, up-to-date answers from reliable sources.
               </p>
             </div>
 
@@ -729,7 +729,7 @@ export default function AboutPage() {
             <div className="text-center space-y-4">
               <h2 className="text-3xl font-medium tracking-tight">Built For Everyone</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Whether you need quick answers or in-depth research, Scira adapts to your needs
+                Whether you need quick answers or in-depth research, Ola adapts to your needs
               </p>
             </div>
 

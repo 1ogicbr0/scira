@@ -5,7 +5,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro, Geist } from 'next/font/google';
+import { Be_Vietnam_Pro, Geist, Open_Sans, DM_Sans } from 'next/font/google';
 
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Toaster } from 'sonner';
@@ -13,35 +13,35 @@ import { Toaster } from 'sonner';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://scira.ai'),
+  metadataBase: new URL('https://ola.ai'),
   title: {
-    default: 'Scira AI',
-    template: '%s | Scira AI',
-    absolute: 'Scira AI',
+    default: 'Ola AI',
+    template: '%s | Ola AI',
+    absolute: 'Ola AI',
   },
-  description: 'Scira AI is a minimalistic AI-powered search engine that helps you find information on the internet.',
+  description: 'Ola AI is a minimalistic AI-powered search engine that helps you find information on the internet.',
   openGraph: {
-    url: 'https://scira.ai',
-    siteName: 'Scira AI',
+    url: 'https://ola.ai',
+    siteName: 'Ola AI',
   },
   keywords: [
-    'scira.ai',
+    'ola.ai',
     'ai search engine',
     'search engine',
-    'scira ai',
-    'Scira AI',
-    'scira AI',
-    'SCIRA.AI',
-    'scira github',
+    'ola ai',
+    'Ola AI',
+    'ola AI',
+    'OLA.AI',
+    'ola github',
     'ai search engine',
-    'Scira',
-    'scira',
-    'scira.app',
-    'scira ai',
-    'scira ai app',
-    'scira',
+    'Ola',
+    'ola',
+    'ola.app',
+    'ola ai',
+    'ola ai app',
+    'ola',
     'MiniPerplx',
-    'Scira AI',
+    'Ola AI',
     'Perplexity alternatives',
     'Perplexity AI alternatives',
     'open source ai search engine',
@@ -50,12 +50,12 @@ export const metadata: Metadata = {
     'ai search',
     'minimal ai search',
     'minimal ai search alternatives',
-    'Scira (Formerly MiniPerplx)',
+    'Ola (Formerly MiniPerplx)',
     'AI Search Engine',
     'mplx.run',
     'mplx ai',
     'zaid mukaddam',
-    'scira.how',
+    'ola.how',
     'search engine',
     'AI',
     'perplexity',
@@ -89,6 +89,20 @@ const beVietnamPro = Be_Vietnam_Pro({
   weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
 
+const openSans = Open_Sans({
+  subsets: ['latin'],
+  variable: '--font-open-sans',
+  preload: true,
+  display: 'swap',
+});
+
+const dmSans = DM_Sans({
+  subsets: ['latin'],
+  variable: '--font-dm-sans',
+  preload: true,
+  display: 'swap',
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -96,7 +110,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} ${beVietnamPro.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body className={`${geist.variable} ${beVietnamPro.variable} ${openSans.variable} ${dmSans.variable} font-sans antialiased`} suppressHydrationWarning>
         <NuqsAdapter>
           <Providers>
             <Toaster position="top-center" />

@@ -642,9 +642,10 @@ const MultiSearch = ({
 
   return (
     <div className="w-full space-y-4">
-      {/* Sources Accordion */}
-      <Accordion type="single" collapsible defaultValue="sources" className="w-full">
-        <AccordionItem value="sources" className="border-none">
+      {/* Sources Accordion - Hidden to use side panel instead */}
+      {/* 
+      <Accordion type="single" collapsible value={accordionValue} onValueChange={setAccordionValue}>
+        <AccordionItem value="sources">
           <AccordionTrigger
             className={cn(
               'py-3 px-4 rounded-xl hover:no-underline group',
@@ -697,7 +698,6 @@ const MultiSearch = ({
                 'rounded-b-xl',
               )}
             >
-              {/* Query tags */}
               <div ref={queryTagsRef} className="flex gap-2 overflow-x-auto no-scrollbar" onWheel={handleWheelScroll}>
                 {result.searches.map((search, i) => (
                   <Badge key={i} variant="outline" className="rounded-full text-xs px-3 py-1 shrink-0">
@@ -707,7 +707,6 @@ const MultiSearch = ({
                 ))}
               </div>
 
-              {/* Preview results */}
               <div
                 ref={previewResultsRef}
                 className="flex gap-3 overflow-x-auto no-scrollbar pb-1"
@@ -729,6 +728,7 @@ const MultiSearch = ({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+      */}
 
       {/* Images */}
       {allImages.length > 0 && (

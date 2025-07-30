@@ -557,9 +557,41 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   };
 
   const renderCitation = (index: number, citationText: string, href: string) => {
+    // Extract a short display name from the citation text
+    const getDisplayName = (text: string) => {
+      // Remove common prefixes like [PDF], [DOC], etc.
+      const cleanText = text.replace(/^\[(?:PDF|DOC|HTML|LINK)\]\s*/i, '');
+      
+      // If it's a URL hostname, extract the domain name
+      if (text.includes('://')) {
+        try {
+          const url = new URL(text.includes('://') ? text : `https://${text}`);
+          return url.hostname.replace('www.', '').split('.')[0];
+        } catch {
+          // If URL parsing fails, continue with text processing
+        }
+      }
+      
+      // For regular text, take first few words or trim to reasonable length
+      const words = cleanText.split(' ');
+      if (words.length <= 3) {
+        return cleanText;
+      }
+      
+      // If it's too long, take first 2-3 words or trim to ~25 characters
+      const shortText = words.slice(0, 3).join(' ');
+      if (shortText.length <= 25) {
+        return shortText;
+      }
+      
+      return cleanText.length <= 25 ? cleanText : cleanText.substring(0, 22) + '...';
+    };
+
+    const displayName = getDisplayName(citationText);
+    
     return (
       <span className="inline-flex items-baseline relative whitespace-normal" key={generateKey()}>
-        {renderHoverCard(href, index + 1, true, citationText)}
+        {renderHoverCard(href, displayName, true, citationText)}
       </span>
     );
   };

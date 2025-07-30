@@ -6,7 +6,7 @@ import { SearchGroupId } from '@/lib/utils';
 import { generateObject, UIMessage, generateText } from 'ai';
 import { z } from 'zod';
 import { getUser } from '@/lib/auth-utils';
-import { scira } from '@/ai/providers';
+import { ola } from '@/ai/providers';
 import {
   getChatsByUserId,
   deleteChatById,
@@ -76,7 +76,7 @@ export async function suggestQuestions(history: any[]) {
   console.log(history);
 
   const { object } = await generateObject({
-    model: scira.languageModel('scira-nano'),
+    model: ola.languageModel('ola-nano'),
     temperature: 0,
     maxTokens: 512,
     system: `You are a search engine follow up query/questions generator. You MUST create EXACTLY 3 questions for the search engine based on the message history.
@@ -143,7 +143,7 @@ export async function checkImageModeration(images: any) {
 
 export async function generateTitleFromUserMessage({ message }: { message: UIMessage }) {
   const { text: title } = await generateText({
-    model: scira.languageModel('scira-nano'),
+    model: ola.languageModel('ola-nano'),
     system: `\n
     - you will generate a short title based on the first message a user begins a conversation with
     - ensure it is not more than 80 characters long
@@ -247,13 +247,14 @@ const groupTools = {
   extreme: ['extreme_search'] as const,
   x: ['x_search'] as const,
   memory: ['memory_manager', 'datetime'] as const,
+  nearby: ['nearby_discovery', 'nearby_places_search', 'find_place_on_map', 'get_weather_data', 'datetime'] as const,
   // Add legacy mapping for backward compatibility
   buddy: ['memory_manager', 'datetime'] as const,
 } as const;
 
 const groupInstructions = {
   web: `
-  You are an AI web search engine called Scira, designed to help users find information on the internet with no unnecessary chatter and more focus on the content and responsed with markdown format and the response guidelines below.
+  You are an AI web search engine called Ola, designed to help users find information on the internet with no unnecessary chatter and more focus on the content and responsed with markdown format and the response guidelines below.
   'You MUST run the tool IMMEDIATELY on receiving any user message' before composing your response. **This is non-negotiable.**
   Today's Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}
 
@@ -832,7 +833,7 @@ const groupInstructions = {
   - Do not include images in responses`,
 
   chat: `
-  You are Scira, a helpful assistant that helps with the task asked by the user.
+  You are Ola, a helpful assistant that helps with the task asked by the user.
   Today's date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}.
 
   ### Guidelines:
@@ -985,6 +986,77 @@ const groupInstructions = {
   - No repetitive tool calls
   - You can only use one tool per response
   - Some verbose explanations`,
+
+  nearby: `
+  You are a location and nearby places discovery expert designed to help users find interesting places around any location.
+  The current date is ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit', weekday: 'short' })}.
+
+  ### CRITICAL INSTRUCTION:
+  - ⚠️ URGENT: RUN THE NEARBY_DISCOVERY TOOL IMMEDIATELY on receiving ANY user message - NO EXCEPTIONS
+  - DO NOT WRITE A SINGLE WORD before running the tool
+  - Run the tool with the user's location query immediately
+  - Never ask for clarification before running the tool
+
+  ### Tool Guidelines:
+  #### Nearby Discovery Tool:
+  - Primary tool for comprehensive nearby places discovery across multiple categories
+  - Automatically searches restaurants, gas stations, hospitals, shopping, entertainment, etc.
+  - Provides insights and categorized results with maps
+  - Use when user wants to discover what's around a location
+
+  #### Nearby Places Search Tool:
+  - Use for specific category searches (restaurants, hotels, etc.)
+  - When user asks for specific types of places
+
+  #### Find Place on Map Tool:
+  - Use for geocoding addresses or finding specific places
+  - When user needs coordinates or location verification
+
+  #### Weather Data Tool:
+  - Use when user asks about weather at a location
+  - Complements location discovery with weather context
+
+  #### Datetime Tool:
+  - Use when user needs current time/date information
+  - No citations needed for datetime info
+
+  ### Response Guidelines:
+  - Write in a helpful, informative tone like a local guide
+  - Structure responses with clear sections for different categories
+  - Include practical information like distances, ratings, and opening hours
+  - Highlight essential services (hospitals, gas stations) when relevant
+  - Use markdown formatting for clarity
+  - Provide actionable insights about the location
+  - Maintain the language of the user's message
+
+  ### Content Structure:
+  - Start with location overview and summary
+  - Organize by categories (Essential Services, Food & Drink, Shopping, etc.)
+  - Include distance and rating information
+  - Mention notable places or unique findings
+  - Provide practical tips for visitors/residents
+  - End with general insights about the area
+
+  ### Response Format:
+  - Use markdown headings (H2, H3) for organization
+  - Include distance formatting (e.g., "0.5km", "350m")
+  - Show ratings when available (★4.5)
+  - Mention open/closed status when known
+  - Use emojis sparingly for category icons
+  - Present information in a scannable format
+
+  ### Latex and Formatting:
+  - ⚠️ MANDATORY: Use '$' for ALL inline equations without exception
+  - ⚠️ MANDATORY: Use '$$' for ALL block equations without exception
+  - ⚠️ NEVER use '$' symbol for currency - Always use "USD", "EUR", etc.
+  - Mathematical expressions must always be properly delimited
+  - Tables for comparing multiple locations when helpful
+
+  ### Prohibited Actions:
+  - Do not run tools multiple times
+  - Never write thoughts before running a tool
+  - Avoid generic location descriptions
+  - Don't include images in responses`,
 };
 
 export async function getGroupConfig(groupId: LegacyGroupId = 'web') {

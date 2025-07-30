@@ -6,7 +6,7 @@
         "name": "Zaid Mukaddam",
         "email": "hey@zaidmukaddam.com",
         "phone": "",
-        "description": "I built Scira, a minimalistic open source AI Powered Search Engine.",
+        "description": "I built Ola, a minimalistic open source AI Powered Search Engine.",
         "webpageUrl": {
             "url": "https://github.com/zaidmukaddam/scira"
         }
@@ -14,8 +14,8 @@
     "projects": [
         {
             "guid": "scira",
-            "name": "Scira",
-            "description": "Scira is a minimalistic open source AI Powered Search Engine.",
+                  "name": "Ola",
+      "description": "Ola is a minimalistic open source AI Powered Search Engine.",
             "webpageUrl": {
                 "url": "https://github.com/zaidmukaddam/scira"
             },

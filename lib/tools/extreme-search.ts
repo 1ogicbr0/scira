@@ -5,12 +5,12 @@
 // ----> Use structured source collection to provide comprehensive research results
 // ----> Return all collected sources and research data to the user
 
-import Exa from 'exa-js';
+import { tavily } from '@tavily/core';
 import { Daytona } from '@daytonaio/sdk';
 import { DataStreamWriter, generateObject, generateText, tool } from 'ai';
 import { z } from 'zod';
 import { serverEnv } from '@/env/server';
-import { scira } from '@/ai/providers';
+import { ola } from '@/ai/providers';
 import { SNAPSHOT_NAME } from '@/lib/constants';
 
 const pythonLibsAvailable = [
@@ -43,7 +43,7 @@ const runCode = async (code: string, installLibs: string[] = []) => {
   return result;
 };
 
-export const exa = new Exa(serverEnv.EXA_API_KEY);
+const tvly = tavily({ apiKey: serverEnv.TAVILY_API_KEY });
 
 type SearchResult = {
   title: string;
@@ -71,21 +71,18 @@ enum SearchCategory {
 const searchWeb = async (query: string, category?: SearchCategory) => {
   console.log(`searchWeb called with query: "${query}", category: ${category}`);
   try {
-    const { results } = await exa.searchAndContents(query, {
-      numResults: 5,
-      type: 'keyword',
-      ...(category
-        ? {
-            category: category as SearchCategory,
-          }
-        : {}),
+    const data = await tvly.search(query, {
+      maxResults: 5,
+      searchDepth: 'basic',
+      topic: category === 'news' ? 'news' : category === 'financial report' ? 'finance' : 'general',
+      includeRawContent: 'text',
     });
-    console.log(`searchWeb received ${results.length} results from Exa API`);
+    console.log(`searchWeb received ${data.results.length} results from Tavily API`);
 
-    const mappedResults = results.map((r) => ({
+    const mappedResults = data.results.map((r: any) => ({
       title: r.title,
       url: r.url,
-      content: r.text,
+      content: r.content,
       publishedDate: r.publishedDate,
       favicon: r.favicon,
     })) as SearchResult[];
@@ -101,23 +98,33 @@ const searchWeb = async (query: string, category?: SearchCategory) => {
 const getContents = async (links: string[]) => {
   console.log(`getContents called with ${links.length} URLs:`, links);
   try {
-    const result = await exa.getContents(links, {
-      text: {
-        maxCharacters: 3000,
-        includeHtmlTags: false,
-      },
-      livecrawl: 'preferred',
-    });
-    console.log(`getContents received ${result.results.length} results from Exa API`);
+    // For Tavily, we'll search for each URL to get content
+    const results = await Promise.all(
+      links.map(async (url) => {
+        try {
+          const data = await tvly.search(url, {
+            maxResults: 1,
+            searchDepth: 'basic',
+            includeRawContent: 'text',
+          });
+          if (data.results.length > 0) {
+            return {
+              title: data.results[0].title,
+              url: data.results[0].url,
+              content: data.results[0].content,
+              publishedDate: data.results[0].publishedDate,
+              favicon: '',
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error fetching content for ${url}:`, error);
+          return null;
+        }
+      })
+    );
 
-    const mappedResults = result.results.map((r) => ({
-      title: r.title,
-      url: r.url,
-      content: r.text,
-      publishedDate: r.publishedDate,
-      favicon: r.favicon,
-    }));
-
+    const mappedResults = results.filter((r): r is NonNullable<typeof r> => r !== null);
     console.log(`getContents returning ${mappedResults.length} mapped results`);
     return mappedResults;
   } catch (error) {
@@ -135,7 +142,7 @@ const extremeSearch = async (prompt: string, dataStream: DataStreamWriter): Prom
 
   // plan out the research
   const { object: plan } = await generateObject({
-    model: scira.languageModel('scira-x-fast'),
+    model: ola.languageModel('ola-4o-mini'),
     schema: z.object({
       plan: z
         .array(
@@ -180,7 +187,7 @@ Plan Guidelines:
 
   // Create the autonomous research agent with tools
   const { text } = await generateText({
-    model: scira.languageModel('scira-x-fast-mini'),
+    model: ola.languageModel('ola-4o-mini'),
     maxSteps: totalTodos,
     system: `
 You are an autonomous deep research analyst. Your goal is to research the given research plan thoroughly with the given tools.
@@ -298,7 +305,7 @@ ${JSON.stringify(plan.plan)}
         description: 'Search the web for information on a topic',
         parameters: z.object({
           query: z.string().describe('The search query to achieve the todo').max(100),
-          category: z.nativeEnum(SearchCategory).optional().describe('The category of the search if relevant'),
+          category: z.nativeEnum(SearchCategory).describe('The category of the search if relevant'),
         }),
         execute: async ({ query, category }, { toolCallId }) => {
           console.log('Web search query:', query);

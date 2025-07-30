@@ -88,6 +88,7 @@ const MapContainer = lazy(() =>
 const TMDBResult = lazy(() => import('@/components/movie-info'));
 const MultiSearch = lazy(() => import('@/components/multi-search'));
 const NearbySearchMapView = lazy(() => import('@/components/nearby-search-map-view'));
+const NearbyDiscoveryView = lazy(() => import('@/components/nearby-discovery-view'));
 const TrendingResults = lazy(() => import('@/components/trending-tv-movies-results'));
 const AcademicPapersCard = lazy(() => import('@/components/academic-papers'));
 const WeatherChart = lazy(() => import('@/components/weather-chart'));
@@ -258,6 +259,81 @@ const NearbySearchSkeleton = ({ type }: { type: string }) => {
         <div className="absolute bottom-4 right-4 space-y-2">
           <div className="w-8 h-8 bg-neutral-300 dark:bg-neutral-700 rounded shadow-sm animate-pulse" />
           <div className="w-8 h-8 bg-neutral-300 dark:bg-neutral-700 rounded shadow-sm animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Dedicated nearby discovery skeleton loading state
+const NearbyDiscoverySkeleton = () => {
+  return (
+    <div className="space-y-6 my-4">
+      {/* Header skeleton */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-6 w-48 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse mb-2" />
+              <div className="h-4 w-32 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-8 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+              <div className="h-8 w-24 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+              <div className="h-8 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Insights skeleton */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-white dark:bg-neutral-800 shadow-sm">
+                  <div className="h-5 w-5 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+                </div>
+                <div>
+                  <div className="h-3 w-16 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse mb-1" />
+                  <div className="h-6 w-12 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse mb-1" />
+                  <div className="h-2 w-20 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Categories skeleton */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {[...Array(3)].map((_, j) => (
+                  <div key={j} className="flex items-center justify-between">
+                    <div className="h-4 w-24 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+                    <div className="h-5 w-8 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Loading text overlay */}
+      <div className="text-center py-4">
+        <div className="flex items-center justify-center gap-2">
+          <MapPin className="h-5 w-5 text-blue-500 animate-pulse" />
+          <TextShimmer className="text-sm font-medium" duration={2}>
+            Discovering nearby places...
+          </TextShimmer>
         </div>
       </div>
     </div>
@@ -649,7 +725,7 @@ CopyButton.displayName = 'CopyButton';
 
 // Now let's add the ToolInvocationListView
 const ToolInvocationListView = memo(
-  ({ toolInvocations, annotations }: { toolInvocations: ToolInvocation[]; annotations: any }) => {
+  ({ toolInvocations, annotations, onSourcesClick }: { toolInvocations: ToolInvocation[]; annotations: any; onSourcesClick?: (sources: Array<{ url: string; title: string; text?: string }>, forceOpen?: boolean, messageId?: string | null) => void }) => {
     const renderToolInvocation = useCallback(
       (toolInvocation: ToolInvocation, _index: number) => {
         const args = JSON.parse(JSON.stringify(toolInvocation.args));
@@ -985,6 +1061,31 @@ const ToolInvocationListView = memo(
           );
         }
 
+        if (toolInvocation.toolName === 'nearby_discovery') {
+          if (!result) {
+            return <NearbyDiscoverySkeleton />;
+          }
+
+          // Handle error responses
+          if (!result.success) {
+            return (
+              <Card className="w-full my-4 p-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <MapPin className="h-5 w-5" />
+                  <span className="font-medium">Nearby discovery failed</span>
+                </div>
+                <p className="text-sm text-red-500 dark:text-red-300 mt-1">{result.error}</p>
+              </Card>
+            );
+          }
+
+          return (
+            <div className="my-4">
+              <NearbyDiscoveryView {...result} />
+            </div>
+          );
+        }
+
         if (toolInvocation.toolName === 'get_weather_data') {
           if (!result) {
             return (
@@ -1111,7 +1212,7 @@ const ToolInvocationListView = memo(
         if (toolInvocation.toolName === 'extreme_search') {
           return (
             <Suspense fallback={<ComponentLoader />}>
-              <ExtremeSearch toolInvocation={toolInvocation} annotations={annotations} />
+              <ExtremeSearch toolInvocation={toolInvocation} annotations={annotations} onSourcesClick={onSourcesClick} />
             </Suspense>
           );
         }

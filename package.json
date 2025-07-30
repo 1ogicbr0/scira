@@ -1,5 +1,5 @@
 {
-  "name": "scira",
+  "name": "ola",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -92,8 +92,8 @@
     "postgres": "^3.4.7",
     "posthog-js": "^1.257.1",
     "prismjs": "^1.30.0",
-    "react": "^19",
-    "react-dom": "^19",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-katex": "^3.1.0",
     "react-latex-next": "^3.0.0",
     "react-markdown": "^10.1.0",
@@ -125,8 +125,8 @@
     "@types/luxon": "^3.6.2",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/react-katex": "^3.0.4",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/unist": "^3.0.3",

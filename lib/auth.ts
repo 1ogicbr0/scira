@@ -250,6 +250,6 @@ export const auth = betterAuth({
     }),
     nextCookies(),
   ],
-  trustedOrigins: ['https://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
-  allowedOrigins: ['https://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
+  trustedOrigins: ['https://localhost:3000', 'https://ola.ai', 'https://www.ola.ai'],
+  allowedOrigins: ['https://localhost:3000', 'https://ola.ai', 'https://www.ola.ai'],
 });

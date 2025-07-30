@@ -29,6 +29,7 @@ import { MarkdownRenderer, preprocessLaTeX } from '@/components/markdown';
 import { deleteTrailingMessages } from '@/app/actions';
 import { getErrorActions, getErrorIcon, isSignInRequired, isProRequired, isRateLimited } from '@/lib/errors';
 import { Crown, PlusCircle, User } from '@phosphor-icons/react';
+import NearbyDiscoveryView from '@/components/nearby-discovery-view';
 
 // Define MessagePart type
 type MessagePart = TextUIPart | ReasoningUIPart | ToolInvocationUIPart | SourceUIPart | StepStartUIPart;
@@ -270,6 +271,7 @@ interface MessageProps {
   isMissingAssistantResponse?: boolean;
   handleRetry?: () => Promise<void>;
   isOwner?: boolean;
+  onSourcesClick?: (sources: Array<{ url: string; title: string; text?: string }>, forceOpen?: boolean, messageId?: string | null) => void;
 }
 
 // Message Editor Component
@@ -461,6 +463,7 @@ export const Message: React.FC<MessageProps> = ({
   isMissingAssistantResponse,
   handleRetry,
   isOwner = true,
+  onSourcesClick,
 }) => {
   // State for expanding/collapsing long user messages
   const [isExpanded, setIsExpanded] = useState(false);
@@ -765,6 +768,151 @@ export const Message: React.FC<MessageProps> = ({
             user={user}
             selectedVisibilityType={selectedVisibilityType}
           />
+        )}
+
+        {/* Sources panel control */}
+        {onSourcesClick && (() => {
+          // Extract sources from tool invocations
+          const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
+          const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
+          
+          // Check if all tool invocations are complete
+          const allToolInvocationsComplete = toolInvocationParts.length > 0 && 
+            toolInvocationParts.every((part: any) => part.toolInvocation?.state === 'result');
+          
+          toolInvocationParts.forEach((part: any) => {
+            const toolInvocation = part.toolInvocation;
+            if (toolInvocation?.state === 'result' && toolInvocation.result) {
+              // Handle extreme search results
+              if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
+                toolInvocation.result.research.sources.forEach((source: any) => {
+                  allSources.push({
+                    url: source.url,
+                    title: source.title || new URL(source.url).hostname,
+                    text: source.text || source.content,
+                    favicon: source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`
+                  });
+                });
+              }
+              // Handle multi search results
+              else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
+                toolInvocation.result.searches.forEach((search: any) => {
+                  search.results?.forEach((result: any) => {
+                    allSources.push({
+                      url: result.url,
+                      title: result.title || new URL(result.url).hostname,
+                      text: result.content || result.text,
+                      favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                    });
+                  });
+                });
+              }
+              // Handle web search results
+              else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
+                toolInvocation.result.results.forEach((result: any) => {
+                  allSources.push({
+                    url: result.url,
+                    title: result.title || new URL(result.url).hostname,
+                    text: result.content || result.text,
+                    favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                  });
+                });
+              }
+            }
+          });
+          
+          // Auto-open sources panel only if all tool invocations are complete, sources exist, and this is the last message
+          if (allSources.length > 0 && isLastMessage && allToolInvocationsComplete) {
+            // Use setTimeout to ensure the component has rendered
+            setTimeout(() => {
+              onSourcesClick(allSources, false, message.id); // forceOpen = false for auto-open, pass messageId
+            }, 500);
+          }
+          
+          // Show left arrow button if sources exist
+          return allSources.length > 0;
+        })() && (
+          <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                // Extract sources from tool invocations
+                const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
+                const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
+                
+                toolInvocationParts.forEach((part: any) => {
+                  const toolInvocation = part.toolInvocation;
+                  if (toolInvocation?.state === 'result' && toolInvocation.result) {
+                    // Handle extreme search results
+                    if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
+                      toolInvocation.result.research.sources.forEach((source: any) => {
+                        allSources.push({
+                          url: source.url,
+                          title: source.title || new URL(source.url).hostname,
+                          text: source.text || source.content,
+                          favicon: source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`
+                        });
+                      });
+                    }
+                    // Handle multi search results
+                    else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
+                      toolInvocation.result.searches.forEach((search: any) => {
+                        search.results?.forEach((result: any) => {
+                          allSources.push({
+                            url: result.url,
+                            title: result.title || new URL(result.url).hostname,
+                            text: result.content || result.text,
+                            favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                          });
+                        });
+                      });
+                    }
+                    // Handle web search results
+                    else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
+                      toolInvocation.result.results.forEach((result: any) => {
+                        allSources.push({
+                          url: result.url,
+                          title: result.title || new URL(result.url).hostname,
+                          text: result.content || result.text,
+                          favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                        });
+                      });
+                    }
+                  }
+                });
+                
+                if (allSources.length > 0) {
+                  onSourcesClick(allSources, true, message.id); // forceOpen = true for manual clicks, pass messageId
+                }
+              }}
+              className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+              title={`View ${(() => {
+                // Count sources from tool invocations
+                const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
+                let sourceCount = 0;
+                
+                toolInvocationParts.forEach((part: any) => {
+                  const toolInvocation = part.toolInvocation;
+                  if (toolInvocation?.state === 'result' && toolInvocation.result) {
+                    if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
+                      sourceCount += toolInvocation.result.research.sources.length;
+                    } else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
+                      toolInvocation.result.searches.forEach((search: any) => {
+                        sourceCount += search.results?.length || 0;
+                      });
+                    } else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
+                      sourceCount += toolInvocation.result.results.length;
+                    }
+                  }
+                });
+                
+                return sourceCount;
+              })()} sources`}
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+            </Button>
+          </div>
         )}
 
         {suggestedQuestions.length > 0 && (user || selectedVisibilityType === 'private') && status !== 'streaming' && (
