@@ -11,8 +11,8 @@ const middleware = extractReasoningMiddleware({
   tagName: 'think',
 });
 
-const fireworks = createOpenAI({
-  baseURL: 'https://router.huggingface.co/fireworks-ai/inference/v1',
+const huggingface = createOpenAI({
+  baseURL: 'https://router.huggingface.co/v1',
   apiKey: process.env.HF_TOKEN,
 });
 

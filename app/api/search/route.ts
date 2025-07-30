@@ -7,7 +7,6 @@ import {
   getCurrentUser,
   getCustomInstructions,
 } from '@/app/actions';
-import { OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import {
   convertToCoreMessages,
   streamText,

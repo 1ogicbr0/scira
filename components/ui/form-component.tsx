@@ -151,6 +151,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                 'bg-background text-foreground',
                 'hover:bg-accent transition-colors',
                 'focus:!outline-none focus:!ring-0',
+                'shadow-none',
                 className,
               )}
             >
@@ -362,7 +363,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
         </Dialog>
 
         <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
-          <DialogContent className="sm:max-w-[420px] p-0 gap-0 border !shadow-none">
+          <DialogContent className="sm:max-w-[420px] p-0 gap-0">
             <div className="p-6 space-y-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -896,7 +897,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p>{isExtreme ? 'extreme mode on' : 'Switch to extreme mode'}</p>
+            <p>{isExtreme ? 'Extreme Search mode on' : 'Switch to Extreme Search mode'}</p>
           </TooltipContent>
         </Tooltip>
       </div>
