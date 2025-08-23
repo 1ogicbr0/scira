@@ -4,7 +4,7 @@ import { UIMessage } from '@ai-sdk/ui-utils';
 import { ReasoningPartView, ReasoningPart } from '@/components/reasoning-part';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle, Copy } from 'lucide-react';
+import { RefreshCw, AlertCircle, Copy, Trash2, FileText } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/markdown';
 import ToolInvocationListView from '@/components/tool-invocation-list-view';
 import { deleteTrailingMessages } from '@/app/actions';
@@ -267,7 +267,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
                     {((user && isOwner) || (!user && selectedVisibilityType === 'private')) && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={async () => {
                           try {
                             const lastUserMessage = messages.findLast((m) => m.role === 'user');
@@ -300,17 +300,17 @@ const Messages: React.FC<MessagesProps> = React.memo(
                             console.error('Error in reload:', error);
                           }
                         }}
-                        className="h-6 !p-1 text-xs rounded-full"
+                        className="h-6 w-6 rounded-full"
+                        title="Rewrite"
                       >
-                        <RefreshCw className="h-3.5 w-3.5 mr-0.5" />
-                        Rewrite
+                        <RefreshCw className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     {/* Only show share for authenticated owners */}
                     {user && isOwner && selectedVisibilityType === 'private' && chatId && onVisibilityChange && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={async () => {
                           try {
                             await onVisibilityChange('public');
@@ -322,23 +322,57 @@ const Messages: React.FC<MessagesProps> = React.memo(
                             toast.error('Failed to share chat');
                           }
                         }}
-                        className="h-6 !p-1 text-xs rounded-full"
+                        className="h-6 w-6 rounded-full"
+                        title="Share"
                       >
-                        <Share className="h-3.5 w-3.5 mr-0.5" />
-                        Share
+                        <Share className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => {
                         navigator.clipboard.writeText(part.text);
                         toast.success('Copied to clipboard');
                       }}
-                      className="h-6 !p-1 text-xs rounded-full"
+                      className="h-6 w-6 rounded-full"
+                      title="Copy"
                     >
-                      <Copy className="h-3.5 w-3.5 mr-0.5" />
-                      Copy
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        // Convert the text to markdown format if needed
+                        const markdownText = part.text;
+                        navigator.clipboard.writeText(markdownText);
+                        toast.success('Markdown copied to clipboard');
+                      }}
+                      className="h-6 w-6 rounded-full"
+                      title="Copy Markdown"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={async () => {
+                        try {
+                          // Remove the current message from the messages array
+                          const newMessages = messages.filter((_, i) => i !== messageIndex);
+                          setMessages(newMessages);
+                          setSuggestedQuestions([]);
+                          toast.success('Message deleted');
+                        } catch (error) {
+                          console.error('Error deleting message:', error);
+                          toast.error('Failed to delete message');
+                        }
+                      }}
+                      className="h-6 w-6 rounded-full text-destructive hover:text-destructive"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 )}
@@ -378,6 +412,11 @@ const Messages: React.FC<MessagesProps> = React.memo(
                 isFullscreen={isFullscreen}
                 setIsExpanded={setIsExpanded}
                 setIsFullscreen={setIsFullscreen}
+                messageIndex={messageIndex}
+                messages={messages}
+                setMessages={setMessages}
+                setSuggestedQuestions={setSuggestedQuestions}
+                status={status}
               />
             );
           }
@@ -490,7 +529,11 @@ const Messages: React.FC<MessagesProps> = React.memo(
             }
 
             return (
-              <div key={message.id || index} className={messageClasses}>
+              <div 
+                key={message.id || index} 
+                className={messageClasses}
+                data-message-index={index}
+              >
                 <Message
                   message={message}
                   index={index}

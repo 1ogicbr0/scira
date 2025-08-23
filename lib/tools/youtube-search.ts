@@ -32,15 +32,27 @@ export const youtubeSearchTool = tool({
   }),
   execute: async ({ query }: { query: string }) => {
     try {
+      // Check if EXA_API_KEY is available and valid
+      if (!serverEnv.EXA_API_KEY || serverEnv.EXA_API_KEY.length < 10) {
+        console.error('EXA_API_KEY is not properly configured for YouTube search');
+        return [];
+      }
+
       const exa = new Exa(serverEnv.EXA_API_KEY as string);
 
       console.log('query', query);
 
-      const searchResult = await exa.searchAndContents(query, {
-        type: 'auto',
-        numResults: 8,
-        includeDomains: ['youtube.com', 'youtu.be', 'm.youtube.com'],
-      });
+      let searchResult;
+      try {
+        searchResult = await exa.searchAndContents(query, {
+          type: 'auto',
+          numResults: 8,
+          includeDomains: ['youtube.com', 'youtu.be', 'm.youtube.com'],
+        });
+      } catch (exaError: any) {
+        console.error('Exa YouTube search error for query "' + query + '":', exaError);
+        return [];
+      }
 
       console.log('🎥 YouTube Search Results:', searchResult);
 

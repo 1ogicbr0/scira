@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import Exa from 'exa-js';
+import { tavily } from '@tavily/core';
 import { serverEnv } from '@/env/server';
 import { DataStreamWriter } from 'ai';
 
@@ -50,12 +50,14 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
       queries: z.array(
         z.string().describe('Array of search queries to look up on the web. Default is 5 to 10 queries.'),
       ),
-      maxResults: z.array(
-        z.number().describe('Array of maximum number of results to return per query. Default is 10.'),
-      ),
-      topics: z.array(
-        z.enum(['general', 'news', 'finance']).describe('Array of topic types to search for. Default is general.'),
-      ),
+      maxResults: z.union([
+        z.number().describe('Maximum number of results to return per query. Default is 10.'),
+        z.array(z.number()).describe('Array of maximum number of results to return per query. Default is 10.'),
+      ]).describe('Maximum number of results to return per query. Can be a single number or array of numbers.'),
+      topics: z.union([
+        z.enum(['general', 'news', 'finance']).describe('Topic type to search for. Default is general.'),
+        z.array(z.enum(['general', 'news', 'finance'])).describe('Array of topic types to search for. Default is general.'),
+      ]).describe('Topic type(s) to search for. Can be a single topic or array of topics.'),
       quality: z.enum(['default', 'best']).describe('Search quality level. Default is default.'),
       include_domains: z
         .array(z.string())
@@ -73,13 +75,19 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
       exclude_domains,
     }: {
       queries: string[];
-      maxResults: number[];
-      topics: ('general' | 'news' | 'finance')[];
+      maxResults: number | number[];
+      topics: ('general' | 'news' | 'finance') | ('general' | 'news' | 'finance')[];
       quality: 'default' | 'best';
       include_domains?: string[];
       exclude_domains?: string[];
     }) => {
-      const exa = new Exa(serverEnv.EXA_API_KEY);
+      // Check if TAVILY_API_KEY is available and valid
+      if (!serverEnv.TAVILY_API_KEY || serverEnv.TAVILY_API_KEY.length < 10) {
+        console.error('TAVILY_API_KEY is not properly configured');
+        return [];
+      }
+
+      const tvly = tavily({ apiKey: serverEnv.TAVILY_API_KEY });
 
       console.log('Queries:', queries);
       console.log('Max Results:', maxResults);
@@ -89,8 +97,12 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
       console.log('Exclude Domains:', exclude_domains);
 
       const searchPromises = queries.map(async (query, index) => {
-        const currentTopic = topics[index] || topics[0] || 'general';
-        const currentMaxResults = maxResults[index] || maxResults[0] || 10;
+        const currentTopic = Array.isArray(topics) 
+          ? (topics[index] || topics[0] || 'general')
+          : topics;
+        const currentMaxResults = Array.isArray(maxResults) 
+          ? (maxResults[index] || maxResults[0] || 10)
+          : maxResults;
 
         try {
           dataStream.writeMessageAnnotation({
@@ -106,12 +118,10 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
           });
 
           const searchOptions: any = {
-            text: true,
-            type: quality === 'best' ? 'auto' : 'hybrid',
-            numResults: currentMaxResults < 10 ? 10 : currentMaxResults,
-            livecrawl: 'preferred',
-            useAutoprompt: true,
-            category: currentTopic === 'finance' ? 'financial report' : currentTopic === 'news' ? 'news' : '',
+            maxResults: currentMaxResults < 10 ? 10 : currentMaxResults,
+            searchDepth: quality === 'best' ? 'advanced' : 'basic',
+            includeRawContent: 'text',
+            topic: currentTopic === 'finance' ? 'finance' : currentTopic === 'news' ? 'news' : 'general',
           };
 
           const processedIncludeDomains = processDomains(include_domains);
@@ -124,21 +134,28 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
             searchOptions.excludeDomains = processedExcludeDomains;
           }
 
-          const data = await exa.searchAndContents(query, searchOptions);
+          let data;
+          try {
+            data = await tvly.search(query, searchOptions);
+          } catch (error: any) {
+            console.error('Tavily search error for query "' + query + '":', error);
+            
+            // Return empty result for this query instead of failing completely
+            return {
+              results: [],
+              images: [],
+              query,
+              followUpQuestions: [],
+            };
+          }
 
           const images: { url: string; description: string }[] = [];
           const results = data.results.map((result: any) => {
-            if (result.image) {
-              images.push({
-                url: result.image,
-                description: cleanTitle(result.title || result.text?.substring(0, 100) + '...' || ''),
-              });
-            }
-
+            // Tavily doesn't provide images in the same way, so we'll skip image processing for now
             return {
               url: result.url,
               title: cleanTitle(result.title || ''),
-              content: (result.text || '').substring(0, 1000),
+              content: (result.content || '').substring(0, 1000),
               published_date: currentTopic === 'news' && result.publishedDate ? result.publishedDate : undefined,
               author: result.author || undefined,
             };
@@ -162,7 +179,7 @@ export const webSearchTool = (dataStream: DataStreamWriter) =>
             images: images.filter((img) => img.url && img.description),
           };
         } catch (error) {
-          console.error(`Exa search error for query "${query}":`, error);
+          console.error(`Tavily search error for query "${query}":`, error);
 
           dataStream.writeMessageAnnotation({
             type: 'query_completion',

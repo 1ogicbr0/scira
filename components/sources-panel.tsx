@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Source {
   url: string;
@@ -24,32 +27,59 @@ interface SourcesPanelProps {
 
 type ResearchStage = 'searching' | 'reading' | 'wrapping' | 'Completed' | 'complete';
 
-const SourceItem: React.FC<{ source: Source; isVisible: boolean }> = ({ source, isVisible }: { source: Source; isVisible: boolean }) => {
+const SourceItem: React.FC<{ source: Source; isVisible: boolean; index: number }> = ({ source, isVisible, index }: { source: Source; isVisible: boolean; index: number }) => {
+  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+  
   const hostname = new URL(source.url).hostname.replace('www.', '');
   const displayName = hostname.split('.')[0];
   
   return (
-    <div 
+    <motion.div 
       className={cn(
-        'inline-flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-800 dark:to-neutral-700 rounded-xl transition-all duration-500 ease-out border border-neutral-200/60 dark:border-neutral-600/40 hover:shadow-md hover:scale-105 hover:bg-gradient-to-r hover:from-neutral-100 hover:to-neutral-200 dark:hover:from-neutral-700 dark:hover:to-neutral-600 hover:border-neutral-300/80 dark:hover:border-neutral-500/60 backdrop-blur-sm',
+        'flex items-center gap-2 px-3 py-2 h-10 bg-white dark:bg-neutral-900 rounded-lg transition-all duration-300 ease-out border border-neutral-200 dark:border-neutral-700 hover:shadow-lg hover:scale-105 hover:border-neutral-300 dark:hover:border-neutral-600 backdrop-blur-sm group',
         isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'
       )}
+      initial={{ opacity: 0, scale: 0.8, y: 20 }}
+      animate={isVisible ? { opacity: 1, scale: 1, y: 0 } : { opacity: 0, scale: 0.8, y: 20 }}
+      transition={{ 
+        duration: 0.4, 
+        delay: index * 0.1,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }}
+      whileHover={{ 
+        scale: 1.05,
+        transition: { duration: 0.2 }
+      }}
+      whileTap={{ scale: 0.98 }}
     >
-      <div className="relative">
-        <img
-          src={source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(hostname)}`}
-          alt=""
-          className="w-4 h-4 rounded-sm flex-shrink-0 drop-shadow-sm"
-          onError={(e) => {
-            e.currentTarget.src = 'https://www.google.com/s2/favicons?sz=128&domain=example.com';
-          }}
-        />
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+      <div className="relative w-6 h-6 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+        {!imageError ? (
+          <img
+            src={source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(hostname)}`}
+            alt=""
+            className={cn('w-4 h-4 object-contain drop-shadow-sm', !imageLoaded && 'opacity-0')}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => {
+              setImageLoaded(true);
+              setImageError(true);
+            }}
+          />
+        ) : (
+          <div className="w-4 h-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-sm flex items-center justify-center">
+            <span className="text-[8px] font-bold text-white">
+              {displayName.charAt(0).toUpperCase()}
+            </span>
+          </div>
+        )}
+        {imageLoaded && !imageError && (
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-md opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+        )}
       </div>
-      <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 tracking-wide">
+      <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100 tracking-wide">
         {displayName}
       </span>
-    </div>
+    </motion.div>
   );
 };
 
@@ -60,7 +90,7 @@ const StageIndicator: React.FC<{
   children?: React.ReactNode 
 }> = ({ stage, isActive, isComplete, children }: { stage: string; isActive: boolean; isComplete: boolean; children?: React.ReactNode }) => {
   return (
-    <div className="mb-8 relative">
+    <div className="mb-6 relative">
       <div className="flex items-center gap-4 mb-4">
         <div className="relative">
           <div className={cn(
@@ -81,7 +111,7 @@ const StageIndicator: React.FC<{
           )}
         </div>
         <h3 className={cn(
-          'font-semibold text-base transition-all duration-300 tracking-wide',
+          'font-semibold text-sm transition-all duration-300 tracking-wide',
           isActive 
             ? 'text-neutral-900 dark:text-neutral-100 scale-105' 
             : 'text-neutral-600 dark:text-neutral-400'
@@ -99,14 +129,14 @@ const StageIndicator: React.FC<{
   );
 };
 
-export const SourcesPanel = ({ 
+const PanelContent = ({ 
   sources, 
-  open, 
   onOpenChange, 
   isSearching = false,
   searchQuery = '',
-  currentStage = 'searching'
-}: SourcesPanelProps): React.ReactElement => {
+  currentStage = 'searching',
+  showCloseButton = true
+}: Omit<SourcesPanelProps, 'open'> & { showCloseButton?: boolean }) => {
   // Use the stage passed from parent (which is now accurately calculated)
   const stage = React.useMemo(() => {
     return currentStage;
@@ -119,29 +149,16 @@ export const SourcesPanel = ({
   }, [isSearching, sources.length]);
 
   return (
-    <div
-      className={cn(
-        'fixed z-40 transition-all duration-500 ease-out shadow-2xl shadow-neutral-900/10 dark:shadow-black/30 backdrop-blur-xl',
-        // Mobile: Full screen overlay
-        'sm:top-0 sm:right-0 sm:h-full sm:border-l sm:border-neutral-200/80 sm:dark:border-neutral-700/50',
-        'sm:w-[500px] md:w-[600px]',
-        // Mobile: Bottom sheet style
-        'bottom-0 left-0 right-0 max-h-[80vh] sm:max-h-full rounded-t-2xl sm:rounded-none border-t sm:border-t-0 border-neutral-200/80 dark:border-neutral-700/50',
-        'bg-gradient-to-b from-white via-neutral-50/95 to-neutral-100/90 dark:from-neutral-900 dark:via-neutral-900/95 dark:to-neutral-950/90',
-        open 
-          ? 'translate-y-0 sm:translate-x-0 opacity-100' 
-          : 'translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0'
-      )}
-    >
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-neutral-200/60 dark:border-neutral-700/40 flex items-center justify-between bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 tracking-wide">
-              Research Progress
-            </span>
-          </div>
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-neutral-200/60 dark:border-neutral-700/40 flex items-center justify-between bg-oklch(0.98 0.01 240)/80 dark:bg-oklch(0.15 0.05 240)/80 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
+          <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 tracking-wide">
+            Research Progress
+          </span>
+        </div>
+        {showCloseButton && (
           <Button
             variant="ghost"
             size="icon"
@@ -150,77 +167,177 @@ export const SourcesPanel = ({
           >
             <X className="h-4 w-4" />
           </Button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-b from-transparent to-neutral-50/30 dark:to-neutral-950/30">
-          {/* Searching Stage */}
-          <StageIndicator 
-            stage="Searching" 
-            isActive={stage === 'searching'} 
-            isComplete={stage !== 'searching'}
-          >
-            {stage === 'searching' && (
-              <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/30 backdrop-blur-sm">
-                <div className="relative">
-                  <Search className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
-                  <div className="absolute -inset-1 bg-blue-400 rounded-full opacity-20 animate-ping"></div>
-                </div>
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-200 tracking-wide">
-                  {searchQuery}
-                </span>
-              </div>
-            )}
-          </StageIndicator>
-
-          {/* Reading Stage */}
-          <StageIndicator 
-            stage="Reading" 
-            isActive={stage === 'reading'} 
-            isComplete={['wrapping', 'Completed', 'complete'].includes(stage)}
-          >
-            <TooltipProvider>
-              <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-br from-neutral-50/50 to-neutral-100/30 dark:from-neutral-800/30 dark:to-neutral-900/50 rounded-2xl border border-neutral-200/40 dark:border-neutral-700/30 backdrop-blur-sm">
-                {sources.slice(0, visibleSources).map((source, index) => (
-                  <Tooltip key={index}>
-                    <TooltipTrigger asChild>
-                      <a 
-                        href={source.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="group hover:scale-105 transition-all duration-300 cursor-pointer"
-                        style={{ animationDelay: `${index * 100}ms` }}
-                      >
-                        <SourceItem 
-                          source={source} 
-                          isVisible={index < visibleSources}
-                        />
-                      </a>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-0 shadow-lg">
-                      <p className="text-xs font-medium">{source.url}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </TooltipProvider>
-          </StageIndicator>
-
-          {/* Wrapping up Stage */}
-          <StageIndicator 
-            stage="Wrapping up" 
-            isActive={stage === 'wrapping'} 
-            isComplete={['Completed', 'complete'].includes(stage)}
-          />
-
-          {/* Completed Stage */}
-          <StageIndicator 
-            stage="Completed" 
-            isActive={stage === 'Completed'} 
-            isComplete={stage === 'Completed'}
-          />
-        </div>
+        )}
       </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-transparent to-oklch(0.95 0.02 250)/30 dark:to-oklch(0.12 0.08 250)/30">
+        {/* Searching Stage */}
+        <StageIndicator 
+          stage="Searching" 
+          isActive={stage === 'searching'} 
+          isComplete={stage !== 'searching'}
+        >
+          {stage === 'searching' && (
+            <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260) rounded-xl border border-blue-200/50 dark:border-blue-800/30 backdrop-blur-sm">
+              <div className="relative">
+                <Search className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
+                <div className="absolute -inset-1 bg-blue-400 rounded-full opacity-20 animate-ping"></div>
+              </div>
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200 tracking-wide">
+                {searchQuery}
+              </span>
+            </div>
+          )}
+        </StageIndicator>
+
+        {/* Reading Stage */}
+        <StageIndicator 
+          stage="Reading" 
+          isActive={stage === 'reading'} 
+          isComplete={['wrapping', 'Completed', 'complete'].includes(stage)}
+        >
+          <TooltipProvider>
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4 bg-gradient-to-br from-oklch(0.95 0.02 250)/50 to-oklch(0.92 0.015 260)/30 dark:from-oklch(0.12 0.08 250)/30 dark:to-oklch(0.08 0.06 260)/50 rounded-2xl border border-neutral-200/40 dark:border-neutral-700/30 backdrop-blur-sm"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
+              {sources.slice(0, visibleSources).map((source, index) => (
+                <Tooltip key={index}>
+                  <TooltipTrigger asChild>
+                    <a 
+                      href={source.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <SourceItem 
+                        source={source} 
+                        isVisible={index < visibleSources}
+                        index={index}
+                      />
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="w-80 p-0 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-lg overflow-hidden">
+                    <div className="p-4">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-5 h-5 rounded-md bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+                          <img
+                            src={source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`}
+                            alt=""
+                            className="w-3 h-3 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="w-3 h-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-sm flex items-center justify-center hidden">
+                            <span className="text-[6px] font-bold text-white">
+                              {new URL(source.url).hostname.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+                          {source.url}
+                        </span>
+                        <div className="ml-auto">
+                          <svg className="w-3 h-3 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      {/* Title */}
+                      <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2 line-clamp-2">
+                        {source.title || new URL(source.url).hostname}
+                      </h3>
+                      
+                      {/* Description */}
+                      {source.text && (
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3">
+                          {source.text}
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </motion.div>
+          </TooltipProvider>
+        </StageIndicator>
+
+        {/* Wrapping up Stage */}
+        <StageIndicator 
+          stage="Wrapping up" 
+          isActive={stage === 'wrapping'} 
+          isComplete={['Completed', 'complete'].includes(stage)}
+        />
+
+        {/* Completed Stage */}
+        <StageIndicator 
+          stage="Completed" 
+          isActive={stage === 'Completed'} 
+          isComplete={stage === 'Completed'}
+        />
+      </div>
+    </div>
+  );
+};
+
+export const SourcesPanel = ({ 
+  sources, 
+  open, 
+  onOpenChange, 
+  isSearching = false,
+  searchQuery = '',
+  currentStage = 'searching'
+}: SourcesPanelProps): React.ReactElement => {
+  const isMobile = useIsMobile();
+
+  // For mobile: Use Sheet component for modal behavior
+  if (isMobile) {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent 
+          side="right" 
+          className="w-full sm:w-[350px] bg-gradient-to-b from-oklch(0.98 0.01 240) via-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.15 0.05 240) dark:via-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260) border-l border-neutral-200/80 dark:border-neutral-700/50 p-0"
+        >
+          <PanelContent
+            sources={sources}
+            onOpenChange={onOpenChange}
+            isSearching={isSearching}
+            searchQuery={searchQuery}
+            currentStage={currentStage}
+            showCloseButton={false}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // For desktop: Use fixed positioning that slides in from right
+  return (
+    <div
+      className={cn(
+        'fixed top-0 right-0 h-full z-40 transition-all duration-500 ease-out shadow-2xl shadow-neutral-900/10 dark:shadow-black/30 backdrop-blur-xl',
+        'border-l border-neutral-200/80 dark:border-neutral-700/50',
+        'w-[400px] lg:w-[450px]',
+        'bg-gradient-to-b from-oklch(0.98 0.01 240) via-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.15 0.05 240) dark:via-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260)',
+        open 
+          ? 'translate-x-0 opacity-100' 
+          : 'translate-x-full opacity-0'
+      )}
+    >
+      <PanelContent
+        sources={sources}
+        onOpenChange={onOpenChange}
+        isSearching={isSearching}
+        searchQuery={searchQuery}
+        currentStage={currentStage}
+      />
     </div>
   );
 }; 

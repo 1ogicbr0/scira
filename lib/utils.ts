@@ -25,7 +25,8 @@ export type SearchGroupId =
   | 'chat'
   | 'extreme'
   | 'memory'
-  | 'crypto';
+  | 'crypto'
+  | 'developer';
 
 export const searchGroups = [
   {
@@ -97,6 +98,13 @@ export const searchGroups = [
     name: 'Extreme',
     description: 'Deep research with multiple sources and analysis',
     icon: TelescopeIcon,
+    show: true,
+  },
+  {
+    id: 'developer' as const,
+    name: 'Developer',
+    description: 'Interactive research with coding and terminal access',
+    icon: CodeIcon,
     show: true,
   },
 ] as const;

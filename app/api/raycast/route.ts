@@ -1,12 +1,12 @@
 import { serverEnv } from '@/env/server';
-import { xai } from '@ai-sdk/xai';
+import { groq } from '@ai-sdk/groq';
 import { tavily } from '@tavily/core';
 import { convertToCoreMessages, tool, customProvider, generateText } from 'ai';
 import { z } from 'zod';
 
 const ola = customProvider({
   languageModels: {
-    'ola-default': xai('grok-3-beta'),
+    'ola-default': groq('llama-3.3-70b-versatile'),
   },
 });
 
@@ -181,7 +181,7 @@ export async function POST(req: Request) {
         },
       }),
       x_search: tool({
-        description: 'Search X (formerly Twitter) posts using xAI Live Search.',
+        description: 'Search X (formerly Twitter) posts using Groq AI.',
         parameters: z.object({
           query: z.string().describe('The search query for X posts'),
           startDate: z.string().describe('The start date of the search in the format YYYY-MM-DD'),
@@ -215,11 +215,11 @@ export async function POST(req: Request) {
               sources: [xHandles && xHandles.length > 0 ? { type: 'x', x_handles: xHandles } : { type: 'x' }],
             };
 
-            const response = await fetch('https://api.x.ai/v1/chat/completions', {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${serverEnv.XAI_API_KEY}`,
+                Authorization: `Bearer ${serverEnv.GROQ_API_KEY}`,
               },
               body: JSON.stringify({
                 model: 'grok-3-latest',
@@ -234,7 +234,7 @@ export async function POST(req: Request) {
             });
 
             if (!response.ok) {
-              throw new Error(`xAI API error: ${response.status} ${response.statusText}`);
+              throw new Error(`Groq API error: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();

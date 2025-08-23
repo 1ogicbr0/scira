@@ -110,6 +110,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   const [processedContent, extractedCitations, latexBlocks] = useMemo(() => {
     const citations: CitationLink[] = [];
 
+    // Debug: Log the incoming content to see if it contains citations
+    console.log('MarkdownRenderer - Incoming content:', content);
+    console.log('MarkdownRenderer - Content length:', content.length);
+
     // First, extract and protect code blocks to prevent LaTeX processing inside them
     const codeBlocks: Array<{ id: string; content: string }> = [];
     let modifiedContent = content;
@@ -184,7 +188,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
 
     // Process standalone URLs at the end of sentences
     const standaloneUrlRegex = /\s+(https?:\/\/[^\s\]]+)(?=\s*[\].,;:!?\s]|$)/g;
+    
+    // Debug: Test the regex patterns
+    console.log('MarkdownRenderer - Testing refWithUrlRegex:', refWithUrlRegex.test(modifiedContent));
+    console.log('MarkdownRenderer - Testing standaloneUrlRegex:', standaloneUrlRegex.test(modifiedContent));
+    
     modifiedContent = modifiedContent.replace(refWithUrlRegex, (match, docType, bracketText, plainText, url) => {
+      console.log('MarkdownRenderer - Found citation match:', { match, docType, bracketText, plainText, url });
       const text = bracketText || plainText;
       const fullText = (docType ? `[${docType}] ` : '') + text;
       const cleanUrl = url.replace(/[.,;:]+$/, '');
@@ -253,6 +263,10 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     codeBlocks.forEach(({ id, content }) => {
       modifiedContent = modifiedContent.replace(id, content);
     });
+
+    // Debug: Log the final citations array
+    console.log('MarkdownRenderer - Final citations array:', citations);
+    console.log('MarkdownRenderer - Final processed content length:', modifiedContent.length);
 
     return [modifiedContent, citations, latexBlocks];
   }, [content]);
@@ -572,26 +586,53 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
         }
       }
       
-      // For regular text, take first few words or trim to reasonable length
-      const words = cleanText.split(' ');
-      if (words.length <= 3) {
-        return cleanText;
-      }
-      
-      // If it's too long, take first 2-3 words or trim to ~25 characters
-      const shortText = words.slice(0, 3).join(' ');
-      if (shortText.length <= 25) {
-        return shortText;
-      }
-      
-      return cleanText.length <= 25 ? cleanText : cleanText.substring(0, 22) + '...';
+      // For regular text, return the full text without truncation
+      return cleanText;
     };
 
     const displayName = getDisplayName(citationText);
     
+    // Get domain for favicon
+    let domain = '';
+    try {
+      domain = new URL(href).hostname;
+    } catch {
+      domain = 'example.com';
+    }
+    
     return (
       <span className="inline-flex items-baseline relative whitespace-normal" key={generateKey()}>
-        {renderHoverCard(href, displayName, true, citationText)}
+        <HoverCard openDelay={10}>
+          <HoverCardTrigger asChild>
+            <Link
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer text-xs no-underline text-primary px-1 m-0! bg-primary/10 rounded-sm font-medium inline-flex items-center gap-0.5 -translate-y-[1px] leading-none hover:bg-primary/20 focus:outline-none focus:ring-1 focus:ring-primary align-baseline"
+            >
+                              <img
+                  src={`https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`}
+                  alt=""
+                  className="w-2 h-2 object-contain rounded-sm"
+                  style={{
+                    margin: '7px 0px',
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              {displayName}
+            </Link>
+          </HoverCardTrigger>
+          <HoverCardContent
+            side="top"
+            align="start"
+            sideOffset={5}
+            className="w-64 p-0 shadow-lg border border-primary/30 rounded-md overflow-hidden bg-background"
+          >
+            <LinkPreview href={href} title={citationText} />
+          </HoverCardContent>
+        </HoverCard>
       </span>
     );
   };
@@ -733,10 +774,13 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
       return <InlineCode key={generateKey()} code={codeString} />;
     },
     link(href, text) {
+      console.log('MarkdownRenderer - Processing link:', { href, text });
       const citationIndex = citationLinks.findIndex((link) => link.link === href);
+      console.log('MarkdownRenderer - Citation index:', citationIndex);
       if (citationIndex !== -1) {
         // For citations, show the citation text in the hover card
         const citationText = citationLinks[citationIndex].text;
+        console.log('MarkdownRenderer - Rendering citation:', citationText);
         return renderCitation(citationIndex, citationText, href);
       }
       return isValidUrl(href) ? (

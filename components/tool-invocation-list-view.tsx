@@ -1735,6 +1735,8 @@ const ToolInvocationListView = memo(
           );
         }
 
+
+
         return null;
       },
       [annotations],

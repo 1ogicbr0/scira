@@ -66,6 +66,8 @@ export const chat = pgTable('chat', {
   visibility: varchar('visibility', { enum: ['public', 'private'] })
     .notNull()
     .default('private'),
+  isPinned: boolean('is_pinned').notNull().default(false),
+  isArchived: boolean('is_archived').notNull().default(false),
 });
 
 export const message = pgTable('message', {

@@ -10,16 +10,28 @@ export const academicSearchTool = tool({
   }),
   execute: async ({ query }: { query: string }) => {
     try {
+      // Check if EXA_API_KEY is available and valid
+      if (!serverEnv.EXA_API_KEY || serverEnv.EXA_API_KEY.length < 10) {
+        console.error('EXA_API_KEY is not properly configured for academic search');
+        return [];
+      }
+
       const exa = new Exa(serverEnv.EXA_API_KEY as string);
 
-      const result = await exa.searchAndContents(query, {
-        type: 'auto',
-        numResults: 20,
-        category: 'research paper',
-        summary: {
-          query: 'Abstract of the Paper',
-        },
-      });
+      let result;
+      try {
+        result = await exa.searchAndContents(query, {
+          type: 'auto',
+          numResults: 20,
+          category: 'research paper',
+          summary: {
+            query: 'Abstract of the Paper',
+          },
+        });
+      } catch (exaError: any) {
+        console.error('Exa academic search error for query "' + query + '":', exaError);
+        return [];
+      }
 
       const processedResults = result.results.reduce<typeof result.results>((acc, paper) => {
         if (acc.some((p) => p.url === paper.url) || !paper.summary) return acc;

@@ -1,7 +1,6 @@
 import { wrapLanguageModel, customProvider, extractReasoningMiddleware } from 'ai';
 
 import { openai, createOpenAI } from '@ai-sdk/openai';
-import { xai } from '@ai-sdk/xai';
 import { groq } from '@ai-sdk/groq';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
@@ -16,17 +15,36 @@ const huggingface = createOpenAI({
   apiKey: process.env.HF_TOKEN,
 });
 
+const fireworks = createOpenAI({
+  baseURL: 'https://api.fireworks.ai/inference/v1',
+  apiKey: process.env.FIREWORKS_API_KEY,
+});
+
 export const ola = customProvider({
   languageModels: {
-    'ola-default': xai('grok-3-mini'),
-    'ola-x-fast-mini': xai('grok-3-mini-fast'),
-    'ola-x-fast': xai('grok-3-fast'),
+    'ola-default': groq('llama-3.3-70b-versatile', {
+      parallelToolCalls: false,
+    }),
+    'ola-x-fast-mini': groq('llama-3.2-11b-text-preview', {
+      parallelToolCalls: false,
+    }),
+    'ola-x-fast': groq('llama-3.3-70b-versatile', {
+      parallelToolCalls: false,
+    }),
     'ola-nano': openai.responses('gpt-4o-mini'),
     'ola-4.1-mini': openai.responses('gpt-4o-mini'),
-    'ola-grok-3': xai('grok-3-fast'),
-    'ola-grok-4': xai('grok-4'),
-    'ola-vision': xai('grok-2-vision-1212'),
-    'ola-g2': xai('grok-2-latest'),
+    'ola-grok-3': groq('llama-3.3-70b-versatile', {
+      parallelToolCalls: false,
+    }),
+    'ola-grok-4': groq('llama-3.3-70b-versatile', {
+      parallelToolCalls: false,
+    }),
+    'ola-vision': groq('llama-3.2-90b-vision-preview', {
+      parallelToolCalls: false,
+    }),
+    'ola-g2': groq('llama-3.3-70b-versatile', {
+      parallelToolCalls: false,
+    }),
     'ola-4o-mini': openai.responses('gpt-4o-mini'),
     'ola-o4-mini': openai.responses('o4-mini-2025-04-16'),
     'ola-o3': openai.responses('o3'),
@@ -44,7 +62,9 @@ export const ola = customProvider({
       model: fireworks('accounts/fireworks/models/deepseek-v3-0324'),
       middleware,
     }),
-    'ola-kimi-k2': groq('moonshotai/kimi-k2-instruct'),
+    'ola-kimi-k2': groq('moonshotai/kimi-k2-instruct', {
+      parallelToolCalls: false,
+    }),
     'ola-haiku': anthropic('claude-3-5-haiku-20241022'),
     'ola-mistral': mistral('mistral-small-latest'),
     'ola-google-lite': google('gemini-2.5-flash-lite'),
@@ -58,11 +78,11 @@ export const ola = customProvider({
 });
 
 export const models = [
-  // Free Unlimited Models (xAI)
+  // Free Unlimited Models (Groq)
   {
     value: 'ola-default',
-    label: 'Grok 3 Mini',
-    description: "xAI's most efficient reasoning LLM.",
+    label: 'Ola Simple',
+    description: "Meta's versatile reasoning LLM.",
     vision: false,
     reasoning: true,
     experimental: false,
@@ -75,8 +95,8 @@ export const models = [
   },
   {
     value: 'ola-vision',
-    label: 'Grok 2 Vision',
-    description: "xAI's advanced vision LLM",
+    label: 'Llama 3.2 Vision',
+    description: "Meta's advanced vision LLM",
     vision: true,
     reasoning: false,
     experimental: false,
@@ -89,8 +109,8 @@ export const models = [
   },
   {
     value: 'ola-grok-3',
-    label: 'Grok 3',
-    description: "xAI's recent smartest LLM",
+    label: 'Llama 3.3 70B Pro',
+    description: "Meta's advanced reasoning LLM",
     vision: false,
     reasoning: false,
     experimental: false,
@@ -103,8 +123,8 @@ export const models = [
   },
   {
     value: 'ola-grok-4',
-    label: 'Grok 4',
-    description: "xAI's most intelligent vision LLM",
+    label: 'Llama 3.3 70B Max',
+    description: "Meta's most capable multimodal LLM",
     vision: true,
     reasoning: true,
     experimental: false,

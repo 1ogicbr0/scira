@@ -15,7 +15,7 @@ import {
   getAcceptedFileTypes,
   shouldBypassRateLimits,
 } from '@/ai/providers';
-import { TelescopeIcon, X, Check, ChevronsUpDown, Globe } from 'lucide-react';
+import { TelescopeIcon, X, Check, ChevronsUpDown, Globe, Code, Download } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { cn, SearchGroup, SearchGroupId, searchGroups } from '@/lib/utils';
 import { Upload } from 'lucide-react';
@@ -28,6 +28,8 @@ import { checkImageModeration } from '@/app/actions';
 import { Crown, LockIcon, MicrophoneIcon, CpuIcon } from '@phosphor-icons/react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useAppSession } from '@/lib/session-context';
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 
 interface ModelSwitcherProps {
   selectedModel: string;
@@ -151,7 +153,6 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
                 'bg-background text-foreground',
                 'hover:bg-accent transition-colors',
                 'focus:!outline-none focus:!ring-0',
-                'shadow-none',
                 className,
               )}
             >
@@ -363,7 +364,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
         </Dialog>
 
         <Dialog open={showSignInDialog} onOpenChange={setShowSignInDialog}>
-          <DialogContent className="sm:max-w-[420px] p-0 gap-0">
+          <DialogContent className="sm:max-w-[420px] p-0 gap-0 border !shadow-none">
             <div className="p-6 space-y-5">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -709,6 +710,7 @@ interface FormComponentProps {
   status: 'submitted' | 'streaming' | 'ready' | 'error';
   setHasSubmitted: React.Dispatch<React.SetStateAction<boolean>>;
   isLimitBlocked?: boolean;
+  onExportResearch?: (format: 'pdf' | 'word') => void;
 }
 
 interface GroupSelectorProps {
@@ -718,20 +720,22 @@ interface GroupSelectorProps {
 }
 
 const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGroup, onGroupSelect, status }) => {
-  const { data: session } = useSession();
+  const { isAuthenticated } = useAppSession();
   const [open, setOpen] = useState(false);
   const isExtreme = selectedGroup === 'extreme';
+  const isDeveloper = selectedGroup === 'developer';
 
   // Memoize visible groups calculation
   const visibleGroups = useMemo(
     () =>
       searchGroups.filter((group) => {
         if (!group.show) return false;
-        if ('requireAuth' in group && group.requireAuth && !session) return false;
+        if ('requireAuth' in group && group.requireAuth && !isAuthenticated) return false;
         if (group.id === 'extreme') return false; // Exclude extreme from dropdown
+        if (group.id === 'developer') return false; // Exclude developer from dropdown
         return true;
       }),
-    [session],
+    [isAuthenticated],
   );
 
   const selectedGroupData = useMemo(
@@ -755,6 +759,22 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
     }
   }, [isExtreme, onGroupSelect]);
 
+  const handleToggleDeveloper = useCallback(() => {
+    if (isDeveloper) {
+      // Switch back to web mode
+      const webGroup = searchGroups.find((group) => group.id === 'web');
+      if (webGroup) {
+        onGroupSelect(webGroup);
+      }
+    } else {
+      // Switch to developer mode
+      const developerGroup = searchGroups.find((group) => group.id === 'developer');
+      if (developerGroup) {
+        onGroupSelect(developerGroup);
+      }
+    }
+  }, [isDeveloper, onGroupSelect]);
+
   const handleGroupChange = useCallback(
     (value: string) => {
       const group = visibleGroups.find((g) => g.id === value);
@@ -770,18 +790,24 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
       {/* Toggle Switch Container */}
       <div className="flex items-center bg-background border border-border rounded-lg !gap-1 !py-1 !px-0.75 h-8">
         {/* Group Selector Side */}
-        <Popover open={open && !isExtreme} onOpenChange={(newOpen) => !isExtreme && setOpen(newOpen)}>
+        <Popover open={open && !isExtreme && !isDeveloper} onOpenChange={(newOpen) => !isExtreme && !isDeveloper && setOpen(newOpen)}>
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
                   role="combobox"
-                  aria-expanded={open && !isExtreme}
+                  aria-expanded={open && !isExtreme && !isDeveloper}
                   size="sm"
                   onClick={() => {
                     if (isExtreme) {
                       // Switch back to web mode when clicking groups in extreme mode
+                      const webGroup = searchGroups.find((group) => group.id === 'web');
+                      if (webGroup) {
+                        onGroupSelect(webGroup);
+                      }
+                    } else if (isDeveloper) {
+                      // Switch back to web mode when clicking groups in developer mode
                       const webGroup = searchGroups.find((group) => group.id === 'web');
                       if (webGroup) {
                         onGroupSelect(webGroup);
@@ -792,12 +818,14 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                   }}
                   className={cn(
                     'flex items-center gap-1.5 !m-0 !px-1.5 h-6 !rounded-md transition-all cursor-pointer',
-                    !isExtreme
+                    !isExtreme && !isDeveloper
                       ? 'bg-accent text-foreground hover:bg-accent/80'
-                      : 'text-muted-foreground hover:bg-accent',
+                      : isDeveloper
+                        ? 'text-white hover:from-gray-800 hover:via-gray-900 hover:to-black shadow-lg animate-gradient-x'
+                        : 'text-muted-foreground hover:bg-accent',
                   )}
                 >
-                  {selectedGroupData && !isExtreme && (
+                  {selectedGroupData && !isExtreme && !isDeveloper && (
                     <>
                       <selectedGroupData.icon className="h-4 w-4" />
                       <ChevronsUpDown className="h-4 w-4 opacity-50" />
@@ -808,11 +836,17 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                       <Globe className="h-3.5 w-3.5" />
                     </>
                   )}
+                  {isDeveloper && (
+                    <>
+                      <Code className="h-3.5 w-3.5" />
+                      <span className="text-xs font-medium">Advanced Copilot</span>
+                    </>
+                  )}
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>{isExtreme ? 'Switch back to search modes' : 'Choose search mode'}</p>
+              <p>{isExtreme ? 'Switch back to search modes' : isDeveloper ? 'Switch back to search modes' : 'Choose search mode'}</p>
             </TooltipContent>
           </Tooltip>
           <PopoverContent
@@ -897,7 +931,41 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p>{isExtreme ? 'Extreme Search mode on' : 'Switch to Extreme Search mode'}</p>
+            <p>{isExtreme ? 'extreme mode on' : 'Switch to extreme mode'}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Developer Mode Side - Advanced Copilot */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleDeveloper}
+              className={cn(
+                'flex items-center gap-1.5 px-3 h-6 rounded-md transition-all relative overflow-hidden',
+                isDeveloper 
+                  ? 'text-white shadow-lg animate-gradient-x' 
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              )}
+            >
+              <Code className="h-4 w-4 z-10" />
+              {isDeveloper && (
+                <span className=" text-xs font-medium z-10">AI</span>
+              )}
+              {isDeveloper && (
+                <div className="absolute inset-0 animate-gradient-x" />
+                
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <div className="text-center">
+              <p className="font-medium">{isDeveloper ? 'Advanced Copilot Mode Active' : 'Advanced Copilot Mode'}</p>
+              <p className="text-xs text-muted-foreground">
+                {isDeveloper ? 'Interactive research with terminal' : 'AI-powered coding & research'}
+              </p>
+            </div>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -929,6 +997,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   status,
   setHasSubmitted,
   isLimitBlocked = false,
+  onExportResearch,
 }) => {
   const [uploadQueue, setUploadQueue] = useState<Array<string>>([]);
   const isMounted = useRef(true);
@@ -1781,6 +1850,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
     debouncedResize();
   }, [input, debouncedResize]);
 
+
+
   return (
     <div className={cn('flex flex-col w-full')}>
       <TooltipProvider>
@@ -1873,7 +1944,14 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
           {/* Form container */}
           <div className="relative">
-            <div className="relative rounded-xl bg-muted border-2 focus-within:border-slate-300 focus-within:shadow-[0_0_0_2px_rgba(148,163,184,0.3)] border-slate-400 focus-within:animate-pulse group">
+            <HoverBorderGradient
+              containerClassName="w-full"
+              className="w-full bg-muted rounded-xl"
+              duration={3}
+              clockwise={true}
+              as="div"
+            >
+              <div className="relative rounded-xl bg-muted group">
               {isRecording ? (
                 <Textarea
                   ref={inputRef}
@@ -1939,7 +2017,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     '!bg-muted',
                     'border-0!',
                     'text-foreground',
-                    'focus:ring-0! focus-visible:ring-0!',
+                    'focus:ring-0! focus-visible:ring-0! focus:outline-none!',
                     'px-4! py-4!',
                     'touch-manipulation',
                     'whatsize',
@@ -2020,6 +2098,38 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       </TooltipContent>
                     </Tooltip>
                   )}
+
+                  {/* Export Button */}
+                  <Tooltip delayDuration={300}>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="group rounded-lg p-1.75 h-8 w-8 border border-border bg-background text-foreground hover:bg-accent transition-colors duration-200"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (onExportResearch) {
+                            onExportResearch('pdf');
+                          }
+                        }}
+                      >
+                        <span className="block">
+                          <Download className="h-4 w-4" />
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={6}
+                      className="border-0 backdrop-blur-xs py-2 px-3 !shadow-none"
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium text-[11px]">Export Research</span>
+                        <span className="text-[10px] text-accent leading-tight">
+                          Export research as PDF or Word
+                        </span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
 
                   {isProcessing ? (
                     <Tooltip delayDuration={300}>
@@ -2117,7 +2227,8 @@ const FormComponent: React.FC<FormComponentProps> = ({
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            </HoverBorderGradient>
           </div>
         </div>
       </TooltipProvider>

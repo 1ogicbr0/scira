@@ -12,10 +12,10 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { betterauthClient } from '@/lib/auth-client';
+import { authClient } from '@/lib/auth-client';
 import { useRouter } from 'next/navigation';
 import { useLocation } from '@/hooks/use-location';
-import { useSession } from '@/lib/auth-client';
+import { useAppSession } from '@/lib/session-context';
 import { useProUserStatus } from '@/hooks/use-user-data';
 import { PRICING } from '@/lib/constants';
 
@@ -39,7 +39,7 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const location = useLocation();
-  const { data: session, isPending } = useSession();
+  const { user, isAuthenticated, isLoading: isSessionLoading } = useAppSession();
   const { isProUser, isLoading: isProStatusLoading } = useProUserStatus();
 
   const form = useForm<CheckoutFormData>({
@@ -62,7 +62,7 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormData) => {
     setIsLoading(true);
     try {
-      const { data: checkout, error } = await betterauthClient.dodopayments.checkout({
+      const { data: checkout, error } = await authClient.dodopayments.checkout({
         slug: process.env.NEXT_PUBLIC_PREMIUM_SLUG,
         customer: {
           email: data.customer.email,
@@ -97,7 +97,7 @@ export default function CheckoutPage() {
   };
 
   // Redirect if not authenticated
-  if (!isPending && !session) {
+  if (!isSessionLoading && !isAuthenticated) {
     router.push('/sign-up');
     return null;
   }
@@ -115,7 +115,7 @@ export default function CheckoutPage() {
   }
 
   // Show loading while checking session, location, or Pro status
-  if (isPending || location.loading || isProStatusLoading) {
+  if (isSessionLoading || location.loading || isProStatusLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

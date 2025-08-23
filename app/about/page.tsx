@@ -41,6 +41,9 @@ import { models } from '@/ai/providers';
 import { VercelLogo } from '@/components/logos/vercel-logo';
 import { ExaLogo } from '@/components/logos/exa-logo';
 import { ElevenLabsLogo } from '@/components/logos/elevenlabs-logo';
+import { motion } from 'motion/react';
+import { TextLoop } from '@/components/core/text-loop';
+import { TextShimmer } from '@/components/core/text-shimmer';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -57,6 +60,22 @@ export default function AboutPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showCryptoAlert, setShowCryptoAlert] = useState(true);
   const { data: githubStars, isLoading: isLoadingStars } = useGitHubStars();
+
+  // Motion variants
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
 
   useEffect(() => {
     const hasAcceptedTerms = localStorage.getItem('hasAcceptedTerms');
@@ -245,18 +264,19 @@ export default function AboutPage() {
                 <span className="text-5xl font-light tracking-tight font-be-vietname-pro">ola</span>
               </Link>
 
-            <h2 className="text-2xl md:text-3xl font-semibold text-foreground max-w-3xl mx-auto">
-              Open Source AI-Powered Search Engine
-            </h2>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground max-w-3xl mx-auto">
+                Open Source AI-Powered Search Engine
+              </h2>
 
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              A clean, minimalistic search engine with RAG and search grounding capabilities. Get accurate, up-to-date
-              answers from reliable sources.
-            </p>
-          </div>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                A clean, minimalistic search engine with RAG and search grounding capabilities. Get accurate, up-to-date
+                answers from reliable sources.
+              </p>
+            </motion.div>
 
           {/* Search Interface */}
-          <div className="max-w-2xl mx-auto">
+          <motion.div variants={item} className="space-y-8">
+            <div className="max-w-2xl mx-auto">
             <form onSubmit={handleSearch}>
               <div className="relative">
                 <input
@@ -274,6 +294,7 @@ export default function AboutPage() {
               </div>
             </form>
           </div>
+          </motion.div>
 
             {/* Social Proof */}
             <motion.div variants={item} className="space-y-12">
@@ -574,6 +595,8 @@ export default function AboutPage() {
               <p className="text-sm text-muted-foreground">Peerlist</p>
             </div>
           </div>
+        </div>
+      </section>
 
       {/* Models Section */}
       <section className="py-24 px-4 bg-accent/10 border-y border-border">

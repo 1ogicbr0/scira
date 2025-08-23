@@ -1,9 +1,13 @@
 'use client';
 
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { signIn } from '@/lib/auth-client';
 import { Loader2 } from 'lucide-react';
+import { useAppSession } from '@/lib/session-context';
 import Link from 'next/link';
 
 type AuthProvider = 'github' | 'google' | 'twitter';
@@ -90,6 +94,51 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
   const [githubLoading, setGithubLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [twitterLoading, setTwitterLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { refreshSession } = useAppSession();
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailLoading(true);
+    
+    try {
+      // Use the custom credentials endpoint
+      const response = await fetch('/api/auth/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          password,
+          action: mode, // 'sign-in' or 'sign-up'
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        // Success - refresh session context and redirect
+        console.log('✅ Authentication successful, refreshing session...');
+        refreshSession();
+        // Add a small delay to ensure the session is refreshed
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      } else {
+        // Show error message
+        console.error(data.error || `${mode === 'sign-up' ? 'Sign up' : 'Sign in'} failed`);
+        // You can add toast notification here
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
 
   return (
     <div className="w-full max-w-[380px] mx-auto">
@@ -97,6 +146,56 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
         <div className="text-center space-y-3">
           <h1 className="text-2xl font-medium">{title}</h1>
           <p className="text-sm text-muted-foreground/80">{description}</p>
+        </div>
+
+        {/* Email/Password Form */}
+        <form onSubmit={handleEmailAuth} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            variant="codeblaze"
+            disabled={emailLoading}
+          >
+            {emailLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {mode === 'sign-in' ? 'Signing in...' : 'Creating account...'}
+              </>
+            ) : (
+              mode === 'sign-in' ? 'Sign In' : 'Create Account'
+            )}
+          </Button>
+        </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -141,7 +240,7 @@ export default function AuthCard({ title, description, mode = 'sign-in' }: AuthC
           <p className="text-sm text-center text-muted-foreground">
             {mode === 'sign-in' ? (
               <>
-                New to Scira?{' '}
+                New to Ola chat?{' '}
                 <Link href="/sign-up" className="text-foreground font-medium hover:underline underline-offset-4">
                   Create account
                 </Link>

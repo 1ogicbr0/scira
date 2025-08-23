@@ -43,6 +43,10 @@ import { Chat, CustomInstructions } from '@/lib/db/schema';
 import { auth } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { geolocation } from '@vercel/functions';
+import { NextRequest } from 'next/server';
+import { db } from '@/lib/db';
+import { session, user } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Import all tools from the organized tool files
 import {
@@ -72,6 +76,12 @@ import {
   redditSearchTool,
   extremeSearchTool,
   nearbyDiscoveryTool,
+  stackOverflowSearchTool,
+  v0SearchTool,
+  githubSearchTool,
+  npmSearchTool,
+  devCommunitySearchTool,
+  docsSearchTool,
 } from '@/lib/tools';
 
 type ResponseMessageWithoutId = CoreToolMessage | CoreAssistantMessage;
@@ -90,6 +100,35 @@ let globalStreamContext: ResumableStreamContext | null = null;
 function getStreamContext() {
   // Disable Redis streaming completely
   return null;
+}
+
+// Helper function to get user from session (same as in other APIs)
+async function getUserFromSession(request: NextRequest) {
+  try {
+    const cookies = request.headers.get('cookie');
+    if (!cookies) return null;
+
+    const match = cookies.match(/better-auth\.session_token=([^;]+)/);
+    if (!match) return null;
+
+    const sessionToken = match[1];
+    const sessionRecord = await db.query.session.findFirst({
+      where: eq(session.token, sessionToken),
+    });
+
+    if (!sessionRecord || new Date() > sessionRecord.expiresAt) {
+      return null;
+    }
+
+    const userRecord = await db.query.user.findFirst({
+      where: eq(user.id, sessionRecord.userId),
+    });
+
+    return userRecord;
+  } catch (error) {
+    console.error('Error getting user from session:', error);
+    return null;
+  }
 }
 
 export async function POST(req: Request) {
@@ -254,6 +293,7 @@ export async function POST(req: Request) {
           if (!chat) {
             // Create chat without title first - title will be generated in onFinish
             const chatCreateStartTime = Date.now();
+            console.log('🔍 Search API - Creating new chat in database');
             await saveChat({
               id,
               userId: user.id,
@@ -261,22 +301,24 @@ export async function POST(req: Request) {
               visibility: selectedVisibilityType,
             });
             console.log(`⏱️  Chat creation took: ${((Date.now() - chatCreateStartTime) / 1000).toFixed(2)}s`);
+            console.log('🔍 Search API - Chat created successfully');
           } else {
             if (chat.userId !== user.id) {
               throw new ChatSDKError('forbidden:chat', 'This chat belongs to another user');
             }
+            console.log('🔍 Search API - Using existing chat');
           }
 
           // Save user message and create stream ID in background (non-blocking)
           const backgroundOperations = (async () => {
             try {
               const backgroundStartTime = Date.now();
+              console.log('🔍 Search API - Saving user message to database');
               await Promise.all([
                 saveMessages({
                   messages: [
                     {
                       chatId: id,
-                      id: messages[messages.length - 1].id,
                       role: 'user',
                       parts: messages[messages.length - 1].parts,
                       attachments: messages[messages.length - 1].experimental_attachments ?? [],
@@ -287,6 +329,7 @@ export async function POST(req: Request) {
                 createStreamId({ streamId, chatId: id }),
               ]);
               console.log(`⏱️  Background operations took: ${((Date.now() - backgroundStartTime) / 1000).toFixed(2)}s`);
+              console.log('🔍 Search API - User message saved successfully');
 
               console.log('--------------------------------');
               console.log('Messages saved: ', messages);
@@ -307,6 +350,15 @@ export async function POST(req: Request) {
         console.log('Messages: ', messages);
         console.log('--------------------------------');
         console.log('Running with model: ', model.trim());
+        console.log('Model type check - is Groq model:', model.includes('ola-default') || model.includes('ola-grok') || model.includes('ola-vision') || model.includes('ola-qwen-32b') || model.includes('ola-kimi-k2') || model.includes('ola-llama-4'));
+        console.log('Model breakdown:');
+        console.log('  - Model value:', model);
+        console.log('  - Is ola-default:', model.includes('ola-default'));
+        console.log('  - Is ola-grok:', model.includes('ola-grok'));
+        console.log('  - Is ola-vision:', model.includes('ola-vision'));
+        console.log('  - Is ola-qwen-32b:', model.includes('ola-qwen-32b'));
+        console.log('  - Is ola-kimi-k2:', model.includes('ola-kimi-k2'));
+        console.log('  - Is ola-llama-4:', model.includes('ola-llama-4'));
         console.log('Group: ', group);
         console.log('Timezone: ', timezone);
 
@@ -315,6 +367,52 @@ export async function POST(req: Request) {
         const setupTime = (preStreamTime - requestStartTime) / 1000;
         console.log('--------------------------------');
         console.log(`Time to reach streamText: ${setupTime.toFixed(2)} seconds`);
+        console.log('--------------------------------');
+
+        console.log('--------------------------------');
+        console.log('Available tools:', Object.keys({
+          // Stock & Financial Tools
+          stock_chart: stockChartTool,
+          currency_converter: currencyConverterTool,
+          coin_data: coinDataTool,
+          coin_data_by_contract: coinDataByContractTool,
+          coin_ohlc: coinOhlcTool,
+
+          // Search & Content Tools
+          x_search: xSearchTool,
+          web_search: webSearchTool(dataStream),
+          academic_search: academicSearchTool,
+          youtube_search: youtubeSearchTool,
+          reddit_search: redditSearchTool,
+          stackoverflow_search: stackOverflowSearchTool(dataStream),
+          v0_search: v0SearchTool(dataStream),
+          github_search: githubSearchTool(dataStream),
+          npm_search: npmSearchTool(dataStream),
+          dev_community_search: devCommunitySearchTool(dataStream),
+          docs_search: docsSearchTool(dataStream),
+          retrieve: retrieveTool,
+
+          // Media & Entertainment
+          movie_or_tv_search: movieTvSearchTool,
+          trending_movies: trendingMoviesTool,
+          trending_tv: trendingTvTool,
+
+          // Location & Maps
+          find_place_on_map: findPlaceOnMapTool,
+          nearby_places_search: nearbyPlacesSearchTool,
+          get_weather_data: weatherTool,
+
+          // Utility Tools
+          text_translate: textTranslateTool,
+          code_interpreter: codeInterpreterTool,
+          track_flight: flightTrackerTool,
+          datetime: datetimeTool,
+          mcp_search: mcpSearchTool,
+          memory_manager: memoryManagerTool,
+          extreme_search: extremeSearchTool(dataStream),
+          nearby_discovery: nearbyDiscoveryTool,
+          greeting: greetingTool,
+        }));
         console.log('--------------------------------');
 
         const result = streamText({
@@ -333,9 +431,14 @@ export async function POST(req: Request) {
                   topP: 1,
                   topK: 40,
                 }
-              : {
-                  temperature: 0,
-                }),
+              : model.includes('ola-grok') || model.includes('ola-vision') || model.includes('ola-kimi-k2') || model.includes('ola-llama-4')
+                ? {
+                    temperature: 0,
+                    maxTokens: 16000,
+                  }
+                : {
+                    temperature: 0,
+                  }),
           maxSteps: 5,
           maxRetries: 10,
           experimental_activeTools: [...activeTools],
@@ -362,12 +465,9 @@ export async function POST(req: Request) {
                   }
                 : {}),
             },
-            xai: {
-              ...(model === 'ola-default'
-                ? {
-                    reasoningEffort: 'low',
-                  }
-                : {}),
+            groq: {
+              parallelToolCalls: false,
+              strictSchemas: true,
             },
           },
           tools: {
@@ -384,6 +484,12 @@ export async function POST(req: Request) {
             academic_search: academicSearchTool,
             youtube_search: youtubeSearchTool,
             reddit_search: redditSearchTool,
+            stackoverflow_search: stackOverflowSearchTool(dataStream),
+            v0_search: v0SearchTool(dataStream),
+            github_search: githubSearchTool(dataStream),
+            npm_search: npmSearchTool(dataStream),
+            dev_community_search: devCommunitySearchTool(dataStream),
+            docs_search: docsSearchTool(dataStream),
             retrieve: retrieveTool,
 
             // Media & Entertainment
@@ -408,7 +514,45 @@ export async function POST(req: Request) {
             greeting: greetingTool,
           },
           experimental_repairToolCall: async ({ toolCall, tools, parameterSchema, error }: { toolCall: any, tools: any, parameterSchema: any, error: any }  ) => {
+            console.log('🔍 Tool call repair - Tool name:', toolCall.toolName);
+            console.log('🔍 Tool call repair - Available tools:', Object.keys(tools));
+            console.log('🔍 Tool call repair - Tool exists:', toolCall.toolName in tools);
+            
+            // Handle malformed tool calls where the entire JSON is passed as tool name
+            if (toolCall.toolName && toolCall.toolName.includes('{') && toolCall.toolName.includes('}')) {
+              console.log('🔍 Tool call repair - Detected malformed tool call with JSON in tool name');
+              try {
+                const jsonStr = toolCall.toolName;
+                const parsed = JSON.parse(jsonStr);
+                
+                // Try to extract the actual tool name and arguments
+                if (parsed.queries && (parsed.maxResults || parsed.quality)) {
+                  // This looks like a web_search call
+                  console.log('🔍 Tool call repair - Attempting to fix web_search call');
+                  return {
+                    toolName: 'web_search',
+                    args: JSON.stringify(parsed)
+                  };
+                }
+                
+                // Try other common tools
+                const toolNames = Object.keys(tools);
+                for (const toolName of toolNames) {
+                  if (jsonStr.includes(toolName)) {
+                    console.log(`🔍 Tool call repair - Attempting to fix ${toolName} call`);
+                    return {
+                      toolName: toolName,
+                      args: JSON.stringify(parsed)
+                    };
+                  }
+                }
+              } catch (parseError) {
+                console.log('🔍 Tool call repair - Failed to parse malformed tool call JSON');
+              }
+            }
+            
             if (NoSuchToolError.isInstance(error)) {
+              console.log('🔍 Tool call repair - NoSuchToolError detected, not attempting to fix');
               return null; // do not attempt to fix invalid tool names
             }
 
@@ -483,7 +627,9 @@ export async function POST(req: Request) {
                   console.log('--------------------------------');
 
                   // Update the chat with the generated title
+                  console.log('🔍 Search API - Updating chat title:', title);
                   await updateChatTitleById({ chatId: id, title });
+                  console.log('🔍 Search API - Chat title updated successfully');
                 }
               } catch (titleError) {
                 console.error('Failed to generate or update title:', titleError);
@@ -519,6 +665,7 @@ export async function POST(req: Request) {
 
               // LAST: Save assistant message (after title is generated)
               try {
+                console.log('🔍 Search API - Saving assistant message to database');
                 const assistantId = getTrailingMessageId({
                   messages: event.response.messages.filter((message: any) => message.role === 'assistant'),
                 });
@@ -535,7 +682,6 @@ export async function POST(req: Request) {
                 await saveMessages({
                   messages: [
                     {
-                      id: assistantId,
                       chatId: id,
                       role: assistantMessage.role,
                       parts: assistantMessage.parts,
@@ -544,6 +690,7 @@ export async function POST(req: Request) {
                     },
                   ],
                 });
+                console.log('🔍 Search API - Assistant message saved successfully');
               } catch (error) {
                 console.error('Failed to save assistant message:', error);
               }

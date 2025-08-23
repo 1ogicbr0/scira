@@ -10,6 +10,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState, useRedu
 // Third-party library imports
 import { useChat, UseChatOptions } from '@ai-sdk/react';
 import { Crown } from '@phosphor-icons/react';
+import { Search, List, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { parseAsString, useQueryState } from 'nuqs';
@@ -22,17 +23,21 @@ import { suggestQuestions, updateChatVisibility } from '@/app/actions';
 // Component imports
 import { ChatDialogs } from '@/components/chat-dialogs';
 import Messages from '@/components/messages';
-import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import FormComponent from '@/components/ui/form-component';
 import { SourcesPanel } from '@/components/sources-panel';
+import { Sidebar } from '@/components/sidebar';
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
+import { ChatTitles } from '@/components/chat-titles';
 
 // Hook imports
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useUsageData } from '@/hooks/use-usage-data';
 import { useProUserStatus } from '@/hooks/use-user-data';
+import { extractResearchData, exportToPDF, exportToWord } from '@/lib/export-utils';
 import { useOptimizedScroll } from '@/hooks/use-optimized-scroll';
+import { useChatThreads } from '@/hooks/use-chat-threads';
 
 // Utility and type imports
 import { SEARCH_LIMITS } from '@/lib/constants';
@@ -68,7 +73,7 @@ const ChatInterface = memo(
     const [q] = useQueryState('q', parseAsString.withDefault(''));
 
     // Use localStorage hook directly for model selection with a default
-    const [selectedModel, setSelectedModel] = useState<string>('ola-4.1-mini'); // Use a non-authenticated model by default
+    const [selectedModel, setSelectedModel] = useLocalStorage<string>('ola-selected-model', 'ola-default'); // Use Ola Simple by default
     const [selectedGroup, setSelectedGroup] = useLocalStorage<SearchGroupId>('ola-selected-group', 'web');
     const [isCustomInstructionsEnabled, setIsCustomInstructionsEnabled] = useLocalStorage(
       'ola-custom-instructions-enabled',
@@ -89,10 +94,17 @@ const ChatInterface = memo(
       false,
     );
 
+    
+
     // Use reducer for complex state management
     const [chatState, dispatch] = useReducer(
       chatReducer,
-      createInitialState(initialVisibility, persistedHasShownUpgradeDialog, persistedHasShownSignInPrompt, false),
+      createInitialState(
+        initialVisibility,
+        persistedHasShownUpgradeDialog,
+        persistedHasShownSignInPrompt,
+        persistedHasShownAnnouncementDialog,
+      ),
     );
 
     const {
@@ -131,8 +143,14 @@ const ChatInterface = memo(
     // Sign-in prompt timer
     const signInTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Announcement dialog timer
+    const announcementTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     // Generate a consistent ID for new chats
     const chatId = useMemo(() => initialChatId ?? uuidv4(), [initialChatId]);
+
+    // Track previous chat ID to detect navigation
+    const [previousChatId, setPreviousChatId] = useState<string | undefined>(initialChatId);
 
     // Pro users bypass all limit checks - much cleaner!
     const shouldBypassLimits = shouldBypassLimitsForModel(selectedModel);
@@ -180,6 +198,33 @@ const ChatInterface = memo(
       };
     }, [user, chatState.hasShownSignInPrompt, setPersitedHasShownSignInPrompt]);
 
+    // Timer for announcement dialog
+    useEffect(() => {
+      // Only start timer if announcement hasn't been shown yet
+      if (!chatState.hasShownAnnouncementDialog) {
+        // Clear any existing timer
+        if (announcementTimerRef.current) {
+          clearTimeout(announcementTimerRef.current);
+        }
+
+        // Set timer for 30 seconds (30000 ms)
+        announcementTimerRef.current = setTimeout(() => {
+          dispatch({ type: 'SET_SHOW_ANNOUNCEMENT_DIALOG', payload: true });
+          dispatch({ type: 'SET_HAS_SHOWN_ANNOUNCEMENT_DIALOG', payload: true });
+          setPersitedHasShownAnnouncementDialog(true);
+        }, 30000);
+      }
+
+      // Cleanup timer on unmount
+      return () => {
+        if (announcementTimerRef.current) {
+          clearTimeout(announcementTimerRef.current);
+        }
+      };
+    }, [chatState.hasShownAnnouncementDialog, setPersitedHasShownAnnouncementDialog]);
+
+    
+
     type VisibilityType = 'public' | 'private';
 
     const chatOptions: UseChatOptions = useMemo(
@@ -214,20 +259,10 @@ const ChatInterface = memo(
             refetchUsage();
           }
 
-          // Check if this is the first message completion and user is not Pro
-          const isFirstMessage = messages.length <= 1;
-
-          console.log('Upgrade dialog check:', {
-            isFirstMessage,
-            isProUser: isUserPro,
-            hasShownUpgradeDialog: chatState.hasShownUpgradeDialog,
-            user: !!user,
-            messagesLength: messages.length,
-          });
-
-          // Show upgrade dialog after first message if user is not Pro and hasn't seen it before
-          if (isFirstMessage && !isUserPro && !proStatusLoading && !chatState.hasShownUpgradeDialog && user) {
-            console.log('Showing upgrade dialog...');
+          // Show upgrade dialog after message completion if user is not Pro and hasn't seen it before
+          // We'll check the actual message count in a separate useEffect after messages are available
+          if (!isUserPro && !proStatusLoading && !chatState.hasShownUpgradeDialog && user) {
+            console.log('Scheduling upgrade dialog check...');
             setTimeout(() => {
               dispatch({ type: 'SET_SHOW_UPGRADE_DIALOG', payload: true });
               dispatch({ type: 'SET_HAS_SHOWN_UPGRADE_DIALOG', payload: true });
@@ -353,6 +388,31 @@ const ChatInterface = memo(
         invalidateChatsCache();
       }
     }, [user, status, router, chatId, initialChatId, messages.length]);
+
+
+
+    // Check for upgrade dialog after messages are available
+    useEffect(() => {
+      const isFirstMessage = messages.length <= 1;
+      
+      console.log('Upgrade dialog check:', {
+        isFirstMessage,
+        isProUser: isUserPro,
+        hasShownUpgradeDialog: chatState.hasShownUpgradeDialog,
+        user: !!user,
+        messagesLength: messages.length,
+      });
+
+      // Show upgrade dialog after first message if user is not Pro and hasn't seen it before
+      if (isFirstMessage && !isUserPro && !proStatusLoading && !chatState.hasShownUpgradeDialog && user && messages.length > 0) {
+        console.log('Showing upgrade dialog...');
+        setTimeout(() => {
+          dispatch({ type: 'SET_SHOW_UPGRADE_DIALOG', payload: true });
+          dispatch({ type: 'SET_HAS_SHOWN_UPGRADE_DIALOG', payload: true });
+          setPersitedHasShownUpgradeDialog(true);
+        }, 1000);
+      }
+    }, [messages.length, isUserPro, proStatusLoading, chatState.hasShownUpgradeDialog, user, setPersitedHasShownUpgradeDialog]);
 
     useEffect(() => {
       if (!initializedRef.current && initialState.query && !messages.length && !initialChatId) {
@@ -489,9 +549,18 @@ const ChatInterface = memo(
     useEffect(() => {
       dispatch({
         type: 'SET_ANY_DIALOG_OPEN',
-        payload: chatState.commandDialogOpen || chatState.showSignInPrompt || chatState.showUpgradeDialog,
+        payload:
+          chatState.commandDialogOpen ||
+          chatState.showSignInPrompt ||
+          chatState.showUpgradeDialog ||
+          chatState.showAnnouncementDialog,
       });
-    }, [chatState.commandDialogOpen, chatState.showSignInPrompt, chatState.showUpgradeDialog]);
+    }, [
+      chatState.commandDialogOpen,
+      chatState.showSignInPrompt,
+      chatState.showUpgradeDialog,
+      chatState.showAnnouncementDialog,
+    ]);
 
     // Keyboard shortcut for command dialog
     useEffect(() => {
@@ -538,14 +607,69 @@ const ChatInterface = memo(
     );
 
     const [sourcesOpen, setSourcesOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true); // Open by default on desktop
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    
+    // Use the chat threads hook
+    const { 
+      threads, 
+      loading: threadsLoading, 
+      error: threadsError,
+      pinThread, 
+      archiveThread, 
+      deleteThread,
+      refreshThreads,
+      addLocalThread,
+      updateLocalThread,
+      loadLocalMessages,
+      saveLocalMessages
+    } = useChatThreads();
+
+    // Debug logging for threads
+    console.log('ChatInterface threads:', threads);
+    console.log('ChatInterface threadsLoading:', threadsLoading);
+    console.log('ChatInterface threadsError:', threadsError);
+    console.log('ChatInterface currentThreadId:', initialChatId || (messages.length > 0 ? chatId : undefined));
+
+    // Reset chat state when navigating to a new chat session
+    useEffect(() => {
+      if (initialChatId && initialChatId !== previousChatId) {
+        console.log('Navigating to new chat session:', initialChatId, 'from:', previousChatId);
+        
+        // For unauthenticated users, try to load messages from local storage
+        if (!user && initialChatId) {
+          const localMessages = loadLocalMessages(initialChatId);
+          if (localMessages.length > 0) {
+            console.log('Loading messages from local storage for thread:', initialChatId);
+            setMessages(localMessages);
+          } else {
+            // No local messages found, start fresh
+            setMessages([]);
+          }
+        } else {
+          // For authenticated users or new sessions, start fresh
+          setMessages([]);
+        }
+        
+        dispatch({ type: 'RESET_SUGGESTED_QUESTIONS' });
+        dispatch({ type: 'RESET_UI_STATE' });
+        // Update the previous chat ID
+        setPreviousChatId(initialChatId);
+      }
+    }, [initialChatId, previousChatId, user, loadLocalMessages]);
+
+    const [researchOpen, setResearchOpen] = useState(false);
     const [sources, setSources] = useState<Array<{ url: string; title: string; text?: string; favicon?: string }>>([]);
     const [userClosedSources, setUserClosedSources] = useState(false);
     const [lastAutoOpenedMessageId, setLastAutoOpenedMessageId] = useState<string | null>(null);
 
-    // Auto-open sources panel when research starts
+    // Auto-open sources panel when research starts (only for extreme search mode)
     useEffect(() => {
       if (status === 'streaming' || status === 'submitted') {
-        if (!userClosedSources) {
+        // Auto-open only for extreme search mode
+        const shouldAutoOpen = selectedGroup === 'extreme';
+        
+        if (!userClosedSources && shouldAutoOpen) {
           setSourcesOpen(true);
         }
         // Reset the user closed flag for new searches (when a new message starts streaming)
@@ -553,25 +677,169 @@ const ChatInterface = memo(
           setUserClosedSources(false);
         }
       }
-    }, [status, userClosedSources]);
+    }, [status, userClosedSources, selectedGroup]);
+
+    // Handle initialChatId changes (when navigating to a specific thread)
+    useEffect(() => {
+      if (initialChatId && initialChatId !== chatId) {
+        // If we have an initialChatId that's different from the current chatId,
+        // we should navigate to that chat
+        router.push(`/search/${initialChatId}`);
+      }
+    }, [initialChatId, chatId, router]);
+
+    // Save chat to database when messages change
+    useEffect(() => {
+      const saveChatToDatabase = async () => {
+        if (!messages.length || !chatId) {
+          console.log('Skipping chat save - no messages or no chatId');
+          return;
+        }
+
+        try {
+          console.log('Chat interface - No need to save chat metadata (handled by search API)');
+          
+          // For unauthenticated users, still save to local storage
+          if (!user) {
+            // Get the first user message as the chat title
+            const firstUserMessage = messages.find(m => m.role === 'user');
+            const chatTitle = firstUserMessage?.content?.slice(0, 50) || 'New Chat';
+            
+            const threadData = {
+              id: chatId,
+              title: chatTitle,
+              lastMessage: messages[messages.length - 1]?.content || 'New conversation',
+              timestamp: new Date().toISOString(),
+              isPinned: false,
+              isArchived: false,
+              messageCount: messages.length,
+            };
+
+            // Check if thread already exists
+            const existingThread = threads.find(t => t.id === chatId);
+            if (existingThread) {
+              // Update existing thread
+              await updateLocalThread(chatId, {
+                title: chatTitle,
+                lastMessage: messages[messages.length - 1]?.content || 'New conversation',
+                timestamp: new Date().toISOString(),
+                messageCount: messages.length,
+              });
+            } else {
+              // Add new thread
+              await addLocalThread(threadData);
+            }
+
+            // Save messages to local storage
+            saveLocalMessages(chatId, messages);
+            console.log('Chat saved to local storage successfully');
+          }
+          // For authenticated users, the search API handles chat creation and updates
+          // We'll refresh threads after the search API call completes
+        } catch (error) {
+          console.error('Error in chat interface:', error);
+        }
+      };
+
+      // Debounce the save operation to avoid too many API calls
+      const timeoutId = setTimeout(saveChatToDatabase, 1000);
+      return () => clearTimeout(timeoutId);
+    }, [messages, user, chatId, chatState.selectedVisibilityType, addLocalThread, updateLocalThread, threads, saveLocalMessages]);
+
+    // Track if we've refreshed threads for this chat session
+    const hasRefreshedForSession = useRef(false);
+
+    // Refresh threads when search API call completes for authenticated users
+    useEffect(() => {
+      if (user && status === 'ready' && messages.length > 0 && !hasRefreshedForSession.current) {
+        console.log('Search API call finished, refreshing threads for authenticated user');
+        hasRefreshedForSession.current = true;
+        refreshThreads();
+      }
+    }, [status, user, refreshThreads, messages.length]);
+
+    // Reset the refresh flag when chat ID changes
+    useEffect(() => {
+      hasRefreshedForSession.current = false;
+    }, [chatId]);
 
     return (
       <div className="flex flex-col font-sans! items-center min-h-screen bg-background text-foreground transition-all duration-500 w-full overflow-x-hidden !scrollbar-thin !scrollbar-thumb-muted-foreground dark:!scrollbar-thumb-muted-foreground !scrollbar-track-transparent hover:!scrollbar-thumb-foreground dark:!hover:scrollbar-thumb-foreground">
-        <div className={cn('w-full transition-all duration-300 ease-in-out', sourcesOpen ? 'sm:mr-[500px] md:mr-[600px]' : '')}>
-          <Navbar
-            isDialogOpen={chatState.anyDialogOpen}
-            chatId={initialChatId || (messages.length > 0 ? chatId : null)}
-            selectedVisibilityType={chatState.selectedVisibilityType}
-            onVisibilityChange={handleVisibilityChange}
-            status={status}
-            user={user}
-            onHistoryClick={() => dispatch({ type: 'SET_COMMAND_DIALOG_OPEN', payload: true })}
-            isOwner={isOwner}
-            subscriptionData={subscriptionData}
-            isProUser={isUserPro}
-            isProStatusLoading={proStatusLoading}
-            isCustomInstructionsEnabled={isCustomInstructionsEnabled}
-            setIsCustomInstructionsEnabled={setIsCustomInstructionsEnabled}
+        {/* Sidebar */}
+        <Sidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          threads={threads}
+          currentThreadId={initialChatId || (messages.length > 0 ? chatId : undefined)}
+          onThreadSelect={(threadId) => {
+            console.log('Selected thread:', threadId);
+            
+            // For unauthenticated users, check if it's a local storage thread
+            if (!user) {
+              const localMessages = loadLocalMessages(threadId);
+              if (localMessages.length > 0) {
+                console.log('Loading local storage messages for thread:', threadId);
+                // Navigate to the thread URL to load the messages
+                router.push(`/search/${threadId}`);
+                return;
+              }
+            }
+            
+            // Navigate to the selected chat (could be database thread or new session)
+            router.push(`/search/${threadId}`);
+          }}
+          onNewThread={() => {
+            console.log('New thread');
+            // Generate a new UUID for the chat session
+            const newChatId = uuidv4();
+            console.log('Generated new chat ID:', newChatId);
+            // Navigate to the new chat session with the UUID
+            router.push(`/search/${newChatId}`);
+          }}
+          onDeleteThread={(threadId) => deleteThread(threadId)}
+          onPinThread={(threadId) => {
+            const thread = threads.find(t => t.id === threadId);
+            if (thread) {
+              pinThread(threadId, !thread.isPinned);
+            }
+          }}
+          onArchiveThread={(threadId) => {
+            const thread = threads.find(t => t.id === threadId);
+            if (thread) {
+              archiveThread(threadId, !thread.isArchived);
+            }
+          }}
+          onCollapsedChange={setSidebarCollapsed}
+          loading={threadsLoading}
+          error={threadsError}
+        />
+        
+        <div className={cn('w-full transition-all duration-300 ease-in-out', sourcesOpen ? 'sm:mr-[200px] lg:mr-[225px]' : '', sidebarOpen ? (sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64') : '', researchOpen ? 'sm:mr-[800px]' : '')}>
+          {/* Sidebar Toggle Button */}
+          <div className="fixed top-4 left-4 z-30 lg:hidden">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="h-10 w-10 bg-background/80 backdrop-blur-sm border-border"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Chat Titles Component */}
+          <ChatTitles
+            messages={messages}
+            onTitleClick={(messageIndex) => {
+              // Find the message element and scroll to it
+              const messageElements = document.querySelectorAll('[data-message-index]');
+              const targetElement = messageElements[messageIndex];
+              if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }}
+            sidebarOpen={sidebarOpen}
+            sidebarCollapsed={sidebarCollapsed}
           />
         </div>
 
@@ -593,6 +861,13 @@ const ChatInterface = memo(
             dispatch({ type: 'SET_HAS_SHOWN_UPGRADE_DIALOG', payload: value });
             setPersitedHasShownUpgradeDialog(value);
           }}
+          showAnnouncementDialog={chatState.showAnnouncementDialog}
+          setShowAnnouncementDialog={(open) => dispatch({ type: 'SET_SHOW_ANNOUNCEMENT_DIALOG', payload: open })}
+          hasShownAnnouncementDialog={chatState.hasShownAnnouncementDialog}
+          setHasShownAnnouncementDialog={(value) => {
+            dispatch({ type: 'SET_HAS_SHOWN_ANNOUNCEMENT_DIALOG', payload: value });
+            setPersitedHasShownAnnouncementDialog(value);
+          }}
           user={user}
           setAnyDialogOpen={(open) => dispatch({ type: 'SET_ANY_DIALOG_OPEN', payload: open })}
         />
@@ -603,7 +878,7 @@ const ChatInterface = memo(
             status === 'ready' && messages.length === 0
               ? 'min-h-screen! flex! flex-col! items-center! justify-center!' // Center everything when no messages
               : 'mt-20! sm:mt-16! flex flex-col!', // Add top margin when showing messages
-            sourcesOpen ? 'sm:mr-[500px] md:mr-[600px]' : '' // Push content left when sources panel is open (desktop only)
+            sourcesOpen ? 'sm:mr-[200px] lg:mr-[225px]' : '' // Smaller margin to keep content centered when sources panel is open
           )}
         >
           <div className={`w-full max-w-[95%] sm:max-w-2xl space-y-6 p-0 mx-auto transition-all duration-300`}>
@@ -613,9 +888,9 @@ const ChatInterface = memo(
                   <Image
                     src="/ola.png"
                     alt="Ola"
-                    className="w-7 h-7 sm:w-11 sm:h-11 invert dark:invert-0"
-                    width={100}
-                    height={100}
+                    className="w-7 h-7 sm:w-10 sm:h-11 invert dark:invert-0"
+                    width={80}
+                    height={80}
                     unoptimized
                     quality={100}
                     priority
@@ -697,9 +972,13 @@ const ChatInterface = memo(
                     setSourcesOpen(true);
                     setUserClosedSources(false);
                   } else if (messageId && messageId !== lastAutoOpenedMessageId && !userClosedSources) {
-                    // Auto-open only if: not previously auto-opened for this message AND user hasn't manually closed
-                    setSourcesOpen(true);
-                    setLastAutoOpenedMessageId(messageId);
+                    // Auto-open only for extreme search mode
+                    const shouldAutoOpen = selectedGroup === 'extreme';
+                    
+                    if (shouldAutoOpen) {
+                      setSourcesOpen(true);
+                      setLastAutoOpenedMessageId(messageId);
+                    }
                   }
                 }}
               />
@@ -707,6 +986,9 @@ const ChatInterface = memo(
 
             <div ref={bottomRef} />
           </div>
+
+          {/* Research Sources Display in Main Content */}
+         
 
           {/* Sources Panel */}
           <SourcesPanel 
@@ -755,6 +1037,7 @@ const ChatInterface = memo(
             })()}
           />
 
+
           {/* Single Form Component with dynamic positioning */}
           {((user && isOwner) || !initialChatId || (!user && chatState.selectedVisibilityType === 'private')) &&
             !isLimitBlocked && (
@@ -765,7 +1048,7 @@ const ChatInterface = memo(
                     ? 'relative' // Centered position when no messages
                     : cn(
                         'fixed bottom-6 sm:bottom-4 left-0 z-20',
-                        sourcesOpen ? 'right-[500px] sm:right-[600px]' : 'right-0'
+                        sourcesOpen ? 'right-[200px] sm:right-[225px]' : 'right-0'
                       ), // Fixed bottom when messages exist, adjusted for sources panel
                 )}
               >
@@ -801,9 +1084,29 @@ const ChatInterface = memo(
                     dispatch({ type: 'SET_HAS_SUBMITTED', payload: newValue });
                   }}
                   isLimitBlocked={isLimitBlocked}
+                  onExportResearch={async (format) => {
+                    // Find the last message with research content
+                    const lastMessage = messages[messages.length - 1];
+                    if (lastMessage && lastMessage.role === 'assistant') {
+                      try {
+                        const researchData = extractResearchData(lastMessage, lastSubmittedQueryRef.current);
+                        if (researchData) {
+                          if (format === 'pdf') {
+                            await exportToPDF(researchData);
+                          } else if (format === 'word') {
+                            await exportToWord(researchData);
+                          }
+                        }
+                      } catch (error) {
+                        console.error('Export error:', error);
+                      }
+                    }
+                  }}
                 />
               </div>
             )}
+
+
 
           {/* Show limit exceeded message */}
           {isLimitBlocked && messages.length > 0 && (
@@ -841,6 +1144,8 @@ const ChatInterface = memo(
               </div>
             </div>
           )}
+
+
         </div>
       </div>
     );

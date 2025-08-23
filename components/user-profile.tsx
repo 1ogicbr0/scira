@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useSession, signOut } from '@/lib/auth-client';
+import { useAppSession } from '@/lib/session-context';
+
 import { redirect } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -71,17 +72,17 @@ const UserProfile = memo(
     const [signingIn, setSigningIn] = useState(false);
     const [showEmail, setShowEmail] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const { data: session, isPending } = useSession();
+    const { user: sessionUser, isAuthenticated, isLoading } = useAppSession();
     const router = useRouter();
 
     // Use passed user prop if available, otherwise fall back to session
-    const currentUser = user || session?.user;
-    const isAuthenticated = !!(user || session);
+    const currentUser = user || sessionUser;
+    const isUserAuthenticated = !!(user || isAuthenticated);
 
     // Use passed Pro status instead of calculating it
     const hasActiveSubscription = isProUser;
 
-    if (isPending && !user) {
+    if (isLoading && !user) {
       return (
         <div className="h-8 w-8 flex items-center justify-center">
           <div className="size-4 rounded-full bg-muted/50 animate-pulse"></div>
@@ -117,7 +118,7 @@ const UserProfile = memo(
           <Tooltip>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
-                {isAuthenticated ? (
+                {isUserAuthenticated ? (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -147,11 +148,11 @@ const UserProfile = memo(
               </DropdownMenuTrigger>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={4}>
-              {isAuthenticated ? 'Account' : 'Sign In'}
+              {isUserAuthenticated ? 'Account' : 'Sign In'}
             </TooltipContent>
           </Tooltip>
           <DropdownMenuContent className="w-[240px] z-[110] mr-5">
-            {isAuthenticated ? (
+            {isUserAuthenticated ? (
               <div className="p-3">
                 <div className="flex items-center gap-2">
                   <Avatar className="size-8 shrink-0 rounded-md border border-neutral-200 dark:border-neutral-700">
@@ -207,7 +208,7 @@ const UserProfile = memo(
             <DropdownMenuSeparator />
 
             {/* Subscription Status - show loading or actual status */}
-            {isAuthenticated && (
+            {isUserAuthenticated && (
               <>
                 {isProStatusLoading ? (
                   <div className="px-3 py-2">
@@ -253,7 +254,7 @@ const UserProfile = memo(
               </>
             )}
 
-            {isAuthenticated && (
+            {isUserAuthenticated && (
               <>
                 <DropdownMenuItem className="cursor-pointer" onClick={() => setSettingsOpen(true)}>
                   <div className="w-full flex items-center gap-2">
@@ -343,7 +344,7 @@ const UserProfile = memo(
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" asChild>
               <a
-                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fscira&env=XAI_API_KEY,OPENAI_API_KEY,ANTHROPIC_API_KEY,GROQ_API_KEY,GOOGLE_GENERATIVE_AI_API_KEY,DAYTONA_API_KEY,E2B_API_KEY,DATABASE_URL,BETTER_AUTH_SECRET,GITHUB_CLIENT_ID,GITHUB_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,TWITTER_CLIENT_ID,TWITTER_CLIENT_SECRET,REDIS_URL,ELEVENLABS_API_KEY,TAVILY_API_KEY,EXA_API_KEY,TMDB_API_KEY,YT_ENDPOINT,FIRECRAWL_API_KEY,OPENWEATHER_API_KEY,SANDBOX_TEMPLATE_ID,GOOGLE_MAPS_API_KEY,MAPBOX_ACCESS_TOKEN,AVIATION_STACK_API_KEY,CRON_SECRET,BLOB_READ_WRITE_TOKEN,MEM0_API_KEY,MEM0_ORG_ID,MEM0_PROJECT_ID,SMITHERY_API_KEY,NEXT_PUBLIC_MAPBOX_TOKEN,NEXT_PUBLIC_POSTHOG_KEY,NEXT_PUBLIC_POSTHOG_HOST,NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,SCIRA_PUBLIC_API_KEY,NEXT_PUBLIC_SCIRA_PUBLIC_API_KEY&envDescription=API%20keys%20and%20configuration%20required%20for%20Scira%20to%20function"
+                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzaidmukaddam%2Fscira&env=OPENAI_API_KEY,ANTHROPIC_API_KEY,GROQ_API_KEY,GOOGLE_GENERATIVE_AI_API_KEY,DAYTONA_API_KEY,E2B_API_KEY,DATABASE_URL,BETTER_AUTH_SECRET,GITHUB_CLIENT_ID,GITHUB_CLIENT_SECRET,GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,TWITTER_CLIENT_ID,TWITTER_CLIENT_SECRET,REDIS_URL,ELEVENLABS_API_KEY,TAVILY_API_KEY,EXA_API_KEY,TMDB_API_KEY,YT_ENDPOINT,FIRECRAWL_API_KEY,OPENWEATHER_API_KEY,SANDBOX_TEMPLATE_ID,GOOGLE_MAPS_API_KEY,MAPBOX_ACCESS_TOKEN,AVIATION_STACK_API_KEY,CRON_SECRET,BLOB_READ_WRITE_TOKEN,MEM0_API_KEY,MEM0_ORG_ID,MEM0_PROJECT_ID,SMITHERY_API_KEY,NEXT_PUBLIC_MAPBOX_TOKEN,NEXT_PUBLIC_POSTHOG_KEY,NEXT_PUBLIC_POSTHOG_HOST,NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,SCIRA_PUBLIC_API_KEY,NEXT_PUBLIC_SCIRA_PUBLIC_API_KEY&envDescription=API%20keys%20and%20configuration%20required%20for%20Scira%20to%20function"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full flex items-center gap-2"
@@ -366,31 +367,46 @@ const UserProfile = memo(
             <DropdownMenuSeparator />
 
             {/* Auth */}
-            {isAuthenticated ? (
+            {isUserAuthenticated ? (
               <DropdownMenuItem
                 className="cursor-pointer w-full flex items-center justify-between gap-2"
-                onClick={() =>
-                  signOut({
-                    fetchOptions: {
-                      onRequest: () => {
-                        setSigningOut(true);
-                        toast.loading('Signing out...');
-                      },
-                      onSuccess: () => {
-                        setSigningOut(false);
-                        localStorage.clear();
-                        toast.success('Signed out successfully');
-                        toast.dismiss();
-                        window.location.href = '/new';
-                      },
-                      onError: () => {
-                        setSigningOut(false);
-                        toast.error('Failed to sign out');
-                        window.location.reload();
-                      },
-                    },
-                  })
-                }
+                onClick={async () => {
+                  try {
+                    // Clear all cookies immediately when sign out is clicked
+                    document.cookie.split(";").forEach(function(c) { 
+                      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                    });
+                    
+                    setSigningOut(true);
+                    toast.loading('Signing out...');
+                    
+                    // Call custom sign out endpoint
+                    const response = await fetch('/api/auth/sign-out', {
+                      method: 'POST',
+                      credentials: 'include',
+                    });
+                    
+                    if (!response.ok) {
+                      throw new Error('Sign out failed');
+                    }
+                    
+                    // Clear localStorage and redirect
+                    setSigningOut(false);
+                    localStorage.clear();
+                    toast.success('Signed out successfully');
+                    toast.dismiss();
+                    window.location.href = '/new';
+                  } catch (error) {
+                    console.error('Sign out error:', error);
+                    setSigningOut(false);
+                    toast.error('Failed to sign out');
+                    // Even if server sign out fails, we've cleared cookies locally
+                    // so we can still redirect
+                    setTimeout(() => {
+                      window.location.href = '/new';
+                    }, 1000);
+                  }
+                }}
               >
                 <span>Sign Out</span>
                 <SignOut className="size-4" />

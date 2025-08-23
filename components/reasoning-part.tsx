@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Minimize2, Maximize2, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Minimize2, Maximize2, ChevronDown, ChevronUp, Sparkles, Copy, Trash2, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Marked from 'marked-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export interface ReasoningPart {
   type: 'reasoning';
@@ -20,6 +22,12 @@ interface ReasoningPartViewProps {
   isFullscreen: boolean;
   setIsFullscreen: (v: boolean) => void;
   setIsExpanded: (v: boolean) => void;
+  // Action button props
+  messageIndex?: number;
+  messages?: any[];
+  setMessages?: (messages: any[] | ((prevMessages: any[]) => any[])) => void;
+  setSuggestedQuestions?: (questions: string[]) => void;
+  status?: string;
 }
 
 // Type definition for table flags
@@ -177,6 +185,11 @@ export const ReasoningPartView: React.FC<ReasoningPartViewProps> = React.memo(
     isFullscreen,
     setIsFullscreen,
     setIsExpanded,
+    messageIndex,
+    messages,
+    setMessages,
+    setSuggestedQuestions,
+    status,
   }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -333,6 +346,60 @@ export const ReasoningPartView: React.FC<ReasoningPartViewProps> = React.memo(
                     )}
                   </div>
                 </div>
+
+                {/* Add action buttons for reasoning content */}
+                {status === 'ready' && isComplete && (
+                  <div className="flex items-center gap-3 mt-2.5 mb-2 px-2.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const reasoningText = part.reasoning || part.details?.map(d => d.text).join('\n') || '';
+                        navigator.clipboard.writeText(reasoningText);
+                        toast.success('Copied to clipboard');
+                      }}
+                      className="h-6 w-6 rounded-full"
+                      title="Copy"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const reasoningText = part.reasoning || part.details?.map(d => d.text).join('\n') || '';
+                        navigator.clipboard.writeText(reasoningText);
+                        toast.success('Markdown copied to clipboard');
+                      }}
+                      className="h-6 w-6 rounded-full"
+                      title="Copy Markdown"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                    </Button>
+                    {messageIndex !== undefined && messages && setMessages && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={async () => {
+                          try {
+                            // Remove the current message from the messages array
+                            const newMessages = messages.filter((_, i) => i !== messageIndex);
+                            setMessages(newMessages);
+                            setSuggestedQuestions?.([]);
+                            toast.success('Message deleted');
+                          } catch (error) {
+                            console.error('Error deleting message:', error);
+                            toast.error('Failed to delete message');
+                          }
+                        }}
+                        className="h-6 w-6 rounded-full text-destructive hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

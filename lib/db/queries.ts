@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, asc, desc, eq, gt, gte, inArray, lt, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, inArray, lt, sql, type SQL } from 'drizzle-orm';
 import {
   user,
   chat,
@@ -126,11 +126,16 @@ export async function getChatsByUserId({
 
 export async function getChatById({ id }: { id: string }) {
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
-    return selectedChat;
+    console.log('🔍 getChatById - Fetching chat:', id);
+    
+    const chatResult = await db.select().from(chat).where(eq(chat.id, id)).limit(1);
+    
+    console.log('🔍 getChatById - Found chat:', chatResult.length > 0 ? chatResult[0] : null);
+    
+    return chatResult[0];
   } catch (error) {
-    console.log('Error getting chat by id', error);
-    return null;
+    console.error('🔍 getChatById - Error:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get chat by id');
   }
 }
 
@@ -158,10 +163,52 @@ export async function getChatWithUserById({ id }: { id: string }) {
   }
 }
 
-export async function saveMessages({ messages }: { messages: Array<Message> }) {
+export async function saveMessages({ messages }: { messages: Array<Omit<Message, 'id'>> }) {
   try {
-    return await db.insert(message).values(messages);
+    console.log('🔍 saveMessages - Saving messages:', messages.length);
+    
+    // Filter out empty or invalid messages
+    const validMessages = messages.filter(msg => 
+      msg.chatId && 
+      msg.role && 
+      msg.parts && 
+      Array.isArray(msg.parts) && 
+      msg.parts.length > 0
+    );
+    
+    if (validMessages.length === 0) {
+      console.log('🔍 saveMessages - No valid messages to save');
+      return;
+    }
+    
+    console.log('🔍 saveMessages - Valid messages to save:', validMessages.length);
+    console.log('🔍 saveMessages - Message details:', validMessages.map(m => ({ chatId: m.chatId, role: m.role })));
+    
+    // Ensure createdAt is a proper Date object for each message and remove id since it's auto-generated
+    const processedMessages = validMessages.map(msg => ({
+      chatId: msg.chatId,
+      role: msg.role,
+      parts: msg.parts,
+      attachments: msg.attachments,
+      createdAt: msg.createdAt instanceof Date ? msg.createdAt : new Date(msg.createdAt),
+    }));
+    
+    console.log('🔍 saveMessages - Processed messages with proper dates');
+    console.log('🔍 saveMessages - First message sample:', JSON.stringify(processedMessages[0], null, 2));
+    
+    const result = await db.insert(message).values(processedMessages);
+    
+    console.log('🔍 saveMessages - Successfully saved messages');
+    
+    return result;
   } catch (error) {
+    console.error('🔍 saveMessages - Error saving messages:', error);
+    console.error('🔍 saveMessages - Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? error.cause : undefined,
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw new ChatSDKError('bad_request:database', 'Failed to save messages');
   }
 }
@@ -178,14 +225,23 @@ export async function getMessagesByChatId({
   'use cache';
 
   try {
-    return await db
+    console.log('🔍 getMessagesByChatId - Fetching messages for chat:', id);
+    console.log('🔍 getMessagesByChatId - Limit:', limit, 'Offset:', offset);
+    
+    const messages = await db
       .select()
       .from(message)
       .where(eq(message.chatId, id))
       .orderBy(asc(message.createdAt))
       .limit(limit)
       .offset(offset);
+    
+    console.log('🔍 getMessagesByChatId - Found messages:', messages.length);
+    console.log('🔍 getMessagesByChatId - Message IDs:', messages.map(m => m.id));
+    
+    return messages;
   } catch (error) {
+    console.error('🔍 getMessagesByChatId - Error:', error);
     throw new ChatSDKError('bad_request:database', 'Failed to get messages by chat id');
   }
 }
@@ -248,6 +304,178 @@ export async function updateChatTitleById({ chatId, title }: { chatId: string; t
     return updatedChat;
   } catch (error) {
     throw new ChatSDKError('bad_request:database', 'Failed to update chat title by id');
+  }
+}
+
+export async function updateChatPinStatus({ chatId, isPinned }: { chatId: string; isPinned: boolean }) {
+  try {
+    const [updatedChat] = await db
+      .update(chat)
+      .set({ isPinned, updatedAt: new Date() })
+      .where(eq(chat.id, chatId))
+      .returning();
+    return updatedChat;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update chat pin status');
+  }
+}
+
+export async function updateChatArchiveStatus({ chatId, isArchived }: { chatId: string; isArchived: boolean }) {
+  try {
+    const [updatedChat] = await db
+      .update(chat)
+      .set({ isArchived, updatedAt: new Date() })
+      .where(eq(chat.id, chatId))
+      .returning();
+    return updatedChat;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update chat archive status');
+  }
+}
+
+export async function getChatsWithLastMessage({ userId }: { userId: string }) {
+  try {
+    // Get all chats for the user
+    const chats = await db
+      .select({
+        id: chat.id,
+        title: chat.title,
+        createdAt: chat.createdAt,
+        updatedAt: chat.updatedAt,
+        visibility: chat.visibility,
+        isPinned: chat.isPinned,
+        isArchived: chat.isArchived,
+      })
+      .from(chat)
+      .where(eq(chat.userId, userId))
+      .orderBy(desc(chat.updatedAt));
+
+    // Get message counts for each chat
+    const messageCounts = await db
+      .select({
+        chatId: message.chatId,
+        count: sql<number>`count(*)`.as('count'),
+      })
+      .from(message)
+      .where(inArray(message.chatId, chats.map(c => c.id)))
+      .groupBy(message.chatId);
+
+    const messageCountMap = new Map(messageCounts.map(mc => [mc.chatId, mc.count]));
+
+    // Get the last message for each chat (simplified approach)
+    const lastMessages = await db
+      .select({
+        chatId: message.chatId,
+        id: message.id,
+        role: message.role,
+        parts: message.parts,
+        createdAt: message.createdAt,
+      })
+      .from(message)
+      .where(inArray(message.chatId, chats.map(c => c.id)))
+      .orderBy(desc(message.createdAt));
+
+    // Group messages by chat and get the latest one for each
+    const lastMessageMap = new Map();
+    lastMessages.forEach(msg => {
+      if (!lastMessageMap.has(msg.chatId)) {
+        lastMessageMap.set(msg.chatId, msg);
+      }
+    });
+
+    // Transform the data to match the Thread interface
+    return chats.map(chat => {
+      const lastMessage = lastMessageMap.get(chat.id);
+      let lastMessageText = 'No messages yet';
+      
+      if (lastMessage?.parts) {
+        try {
+          const parts = lastMessage.parts as any;
+          
+          if (Array.isArray(parts) && parts.length > 0) {
+            // Find the first part that contains actual text content
+            let textPart = null;
+            
+            for (const part of parts) {
+              // Skip step-start and other metadata parts
+              if (part?.type === 'step-start' || part?.type === 'step-end' || part?.type === 'tool-call') {
+                continue;
+              }
+              
+              // Look for parts with actual text content
+              if (part?.text) {
+                textPart = part.text;
+                break;
+              } else if (part?.content) {
+                textPart = part.content;
+                break;
+              } else if (typeof part === 'string') {
+                textPart = part;
+                break;
+              } else if (part?.type === 'text' && part?.text) {
+                textPart = part.text;
+                break;
+              }
+            }
+            
+            if (textPart) {
+              lastMessageText = textPart;
+            } else {
+              // If no text part found, try to extract from the first non-metadata part
+              const firstNonMetadataPart = parts.find(part => 
+                part?.type !== 'step-start' && 
+                part?.type !== 'step-end' && 
+                part?.type !== 'tool-call'
+              );
+              
+              if (firstNonMetadataPart) {
+                if (typeof firstNonMetadataPart === 'string') {
+                  lastMessageText = firstNonMetadataPart;
+                } else if (firstNonMetadataPart?.text) {
+                  lastMessageText = firstNonMetadataPart.text;
+                } else if (firstNonMetadataPart?.content) {
+                  lastMessageText = firstNonMetadataPart.content;
+                } else {
+                  lastMessageText = JSON.stringify(firstNonMetadataPart);
+                }
+              } else {
+                lastMessageText = 'Message content';
+              }
+            }
+          } else if (typeof parts === 'string') {
+            lastMessageText = parts;
+          } else if (parts?.text) {
+            lastMessageText = parts.text;
+          } else if (parts?.content) {
+            lastMessageText = parts.content;
+          } else {
+            // Try to stringify the parts if it's an object
+            lastMessageText = typeof parts === 'object' ? JSON.stringify(parts) : String(parts);
+          }
+          
+          // Truncate the message if it's too long
+          if (lastMessageText.length > 100) {
+            lastMessageText = lastMessageText.substring(0, 100) + '...';
+          }
+        } catch (error) {
+          console.error('Error parsing message parts:', error);
+          lastMessageText = 'Message content';
+        }
+      }
+
+      return {
+        id: chat.id,
+        title: chat.title,
+        lastMessage: lastMessageText,
+        timestamp: (lastMessage?.createdAt as Date)?.toISOString() || (chat.updatedAt as Date).toISOString(),
+        isPinned: chat.isPinned,
+        isArchived: chat.isArchived,
+        messageCount: messageCountMap.get(chat.id) || 0,
+      };
+    });
+  } catch (error) {
+    console.error('Error in getChatsWithLastMessage:', error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get chats with last message');
   }
 }
 

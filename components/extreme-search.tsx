@@ -1577,6 +1577,90 @@ const ExtremeSearchComponent = ({
           </div>
         )}
 
+        {/* Resources Section */}
+        {uniqueSources.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center gap-1.5 mb-3">
+              <h3 className="text-xs font-medium text-neutral-800 dark:text-neutral-200">Resources</h3>
+              <div className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-md text-neutral-500 dark:text-neutral-400">
+                {uniqueSources.length} source{uniqueSources.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1" onWheel={handleWheelScroll}>
+              {uniqueSources.slice(0, 4).map((source, index) => (
+                <a
+                  key={index}
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block flex-shrink-0 w-[280px]"
+                >
+                  <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 transition-all duration-200 hover:shadow-sm hover:border-neutral-300 dark:hover:border-neutral-700">
+                    <div className="flex items-start gap-3">
+                      <div className="relative w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center overflow-hidden shrink-0">
+                        {source.favicon ? (
+                          <img
+                            src={source.favicon}
+                            alt=""
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <Globe className="w-5 h-5 text-neutral-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 line-clamp-2 mb-1">
+                          {source.title || new URL(source.url).hostname}
+                        </p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                          {new URL(source.url).hostname.replace('www.', '')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </a>
+              ))}
+              
+              {/* More Sources Card */}
+              {uniqueSources.length > 4 && (
+                <div className="flex-shrink-0 w-[280px]">
+                  <div 
+                    className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 transition-all duration-200 hover:shadow-sm hover:border-neutral-300 dark:hover:border-neutral-700 cursor-pointer"
+                    onClick={() => setSourcesSheetOpen(true)}
+                  >
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <div className="flex justify-center mb-2">
+                          <div className="flex -space-x-2">
+                            {uniqueSources.slice(4, 8).map((source, index) => {
+                              const hostname = new URL(source.url).hostname.replace('www.', '');
+                              return (
+                                <div
+                                  key={index}
+                                  className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-xs font-medium border-2 border-white dark:border-neutral-900"
+                                >
+                                  {hostname.charAt(0).toUpperCase()}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                          +{uniqueSources.length - 4} Sources
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Then show the sources view */}
         {/* {renderSources(uniqueSources)} */}
 

@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { nextCookies } from 'better-auth/next-js';
+import { generateId } from 'ai';
 import {
   user,
   session,
@@ -85,6 +86,16 @@ export const auth = betterAuth({
     twitter: {
       clientId: serverEnv.TWITTER_CLIENT_ID,
       clientSecret: serverEnv.TWITTER_CLIENT_SECRET,
+    },
+  },
+  credentials: {
+    email: {
+      type: 'email',
+      required: true,
+    },
+    password: {
+      type: 'password',
+      required: true,
     },
   },
   pluginRoutes: {

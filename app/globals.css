@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@xterm/xterm/css/xterm.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -25,6 +26,27 @@
   }
 }
 
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes blue-outline {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
 @theme {
   --animate-accordion-down: accordion-down 300ms ease-out;
   --animate-accordion-up: accordion-up 300ms ease-out;
@@ -43,6 +65,22 @@
 }
 
 @layer utilities {
+  .animate-gradient-x {
+    animation: gradient-x 8s linear infinite;
+    background-size: 400% 100%;
+    background-image: linear-gradient(90deg, 
+      #111827 0%, 
+      #1F2937 25%, 
+      #374151 50%, 
+      #1F2937 75%, 
+      #000000 100%
+    );
+  }
+
+  .animate-blue-outline {
+    animation: blue-outline 2s infinite;
+  }
+  
   .markdown-body .katex {
     font-size: 1.1em;
   }
@@ -173,7 +211,8 @@
   }
 
   body {
-    @apply bg-background text-foreground !scrollbar;
+    @apply text-foreground !scrollbar;
+    background: linear-gradient(135deg, oklch(0.08 0.02 240) 0%, oklch(0.06 0.03 250) 50%, oklch(0.04 0.02 260) 100%);
   }
 
   [role='button'],
@@ -208,38 +247,38 @@
   --font-be-vietnam-pro: 'Be Vietnam Pro';
   --font-open-sans: 'Open Sans';
   --font-dm-sans: 'DM Sans';
-  --background: oklch(0.9821 0 0);
-  --foreground: oklch(0.2435 0 0);
-  --card: oklch(0.9911 0 0);
-  --card-foreground: oklch(0.2435 0 0);
-  --popover: oklch(0.9911 0 0);
-  --popover-foreground: oklch(0.2435 0 0);
-  --primary: oklch(0.4341 0.0392 41.9938);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.92 0.0651 74.3695);
-  --secondary-foreground: oklch(0.3499 0.0685 40.8288);
-  --muted: oklch(0.9521 0 0);
-  --muted-foreground: oklch(0.5032 0 0);
-  --accent: oklch(0.931 0 0);
-  --accent-foreground: oklch(0.2435 0 0);
+  --background: oklch(0.08 0.02 240);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.12 0.02 240);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.12 0.02 240);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.7 0.15 220);
+  --primary-foreground: oklch(0.08 0.02 240);
+  --secondary: oklch(0.15 0.02 240);
+  --secondary-foreground: oklch(0.9 0.02 240);
+  --muted: oklch(0.12 0.02 240);
+  --muted-foreground: oklch(0.7 0.02 240);
+  --accent: oklch(0.15 0.02 240);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.6271 0.1936 33.339);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.8822 0 0);
-  --input: oklch(0.8822 0 0);
-  --ring: oklch(0.4341 0.0392 41.9938);
-  --chart-1: oklch(0.4341 0.0392 41.9938);
-  --chart-2: oklch(0.92 0.0651 74.3695);
-  --chart-3: oklch(0.931 0 0);
-  --chart-4: oklch(0.9367 0.0523 75.5009);
-  --chart-5: oklch(0.4338 0.0437 41.6746);
-  --sidebar: oklch(0.9881 0 0);
-  --sidebar-foreground: oklch(0.2645 0 0);
-  --sidebar-primary: oklch(0.325 0 0);
-  --sidebar-primary-foreground: oklch(0.9881 0 0);
-  --sidebar-accent: oklch(0.9761 0 0);
-  --sidebar-accent-foreground: oklch(0.325 0 0);
-  --sidebar-border: oklch(0.9401 0 0);
-  --sidebar-ring: oklch(0.7731 0 0);
+  --border: oklch(0.15 0.02 240);
+  --input: oklch(0.12 0.02 240);
+  --ring: oklch(0.7 0.15 220);
+  --chart-1: oklch(0.7 0.15 220);
+  --chart-2: oklch(0.15 0.02 240);
+  --chart-3: oklch(0.12 0.02 240);
+  --chart-4: oklch(0.18 0.02 240);
+  --chart-5: oklch(0.7 0.15 220);
+  --sidebar: oklch(0.1 0.02 240);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.7 0.15 220);
+  --sidebar-primary-foreground: oklch(0.08 0.02 240);
+  --sidebar-accent: oklch(0.12 0.02 240);
+  --sidebar-accent-foreground: oklch(0.9 0.02 240);
+  --sidebar-border: oklch(0.15 0.02 240);
+  --sidebar-ring: oklch(0.7 0.15 220);
   --radius: 0.625rem;
   --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
@@ -257,38 +296,38 @@
   --font-be-vietnam-pro: 'Be Vietnam Pro';
   --font-open-sans: 'Open Sans';
   --font-dm-sans: 'DM Sans';
-  --background: oklch(0.1776 0 0);
-  --foreground: oklch(0.9491 0 0);
-  --card: oklch(0.2134 0 0);
-  --card-foreground: oklch(0.9491 0 0);
-  --popover: oklch(0.2134 0 0);
-  --popover-foreground: oklch(0.9491 0 0);
-  --primary: oklch(0.9247 0.0524 66.1732);
-  --primary-foreground: oklch(0.2029 0.024 200.1962);
-  --secondary: oklch(0.3163 0.019 63.6992);
-  --secondary-foreground: oklch(0.9247 0.0524 66.1732);
-  --muted: oklch(0.252 0 0);
-  --muted-foreground: oklch(0.7699 0 0);
-  --accent: oklch(0.285 0 0);
-  --accent-foreground: oklch(0.9491 0 0);
+  --background: oklch(0.08 0.02 240);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0.12 0.02 240);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.12 0.02 240);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(0.7 0.15 220);
+  --primary-foreground: oklch(0.08 0.02 240);
+  --secondary: oklch(0.15 0.02 240);
+  --secondary-foreground: oklch(0.9 0.02 240);
+  --muted: oklch(0.12 0.02 240);
+  --muted-foreground: oklch(0.7 0.02 240);
+  --accent: oklch(0.15 0.02 240);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.6271 0.1936 33.339);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.2351 0.0115 91.7467);
-  --input: oklch(0.4017 0 0);
-  --ring: oklch(0.9247 0.0524 66.1732);
-  --chart-1: oklch(0.9247 0.0524 66.1732);
-  --chart-2: oklch(0.3163 0.019 63.6992);
-  --chart-3: oklch(0.285 0 0);
-  --chart-4: oklch(0.3481 0.0219 67.0001);
-  --chart-5: oklch(0.9245 0.0533 67.0855);
-  --sidebar: oklch(0.2103 0.0059 285.8852);
-  --sidebar-foreground: oklch(0.9674 0.0013 286.3752);
-  --sidebar-primary: oklch(0.4882 0.2172 264.3763);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.2739 0.0055 286.0326);
-  --sidebar-accent-foreground: oklch(0.9674 0.0013 286.3752);
-  --sidebar-border: oklch(0.2739 0.0055 286.0326);
-  --sidebar-ring: oklch(0.8711 0.0055 286.286);
+  --border: oklch(0.15 0.02 240);
+  --input: oklch(0.12 0.02 240);
+  --ring: oklch(0.7 0.15 220);
+  --chart-1: oklch(0.7 0.15 220);
+  --chart-2: oklch(0.15 0.02 240);
+  --chart-3: oklch(0.12 0.02 240);
+  --chart-4: oklch(0.18 0.02 240);
+  --chart-5: oklch(0.7 0.15 220);
+  --sidebar: oklch(0.1 0.02 240);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.7 0.15 220);
+  --sidebar-primary-foreground: oklch(0.08 0.02 240);
+  --sidebar-accent: oklch(0.12 0.02 240);
+  --sidebar-accent-foreground: oklch(0.9 0.02 240);
+  --sidebar-border: oklch(0.15 0.02 240);
+  --sidebar-ring: oklch(0.7 0.15 220);
   --radius: 0.625rem;
   --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
@@ -358,8 +397,13 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
     font-family: var(--font-dm-sans);
+    background: linear-gradient(135deg, oklch(0.98 0.01 240) 0%, oklch(0.95 0.02 250) 50%, oklch(0.92 0.015 260) 100%);
+  }
+
+  .dark body {
+    background: linear-gradient(135deg, oklch(0.08 0.02 240) 0%, oklch(0.06 0.03 250) 50%, oklch(0.04 0.02 260) 100%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -438,5 +482,14 @@
   /* Ensure place card overlays have proper z-index */
   .place-card-overlay {
     z-index: 15 !important;
+  }
+
+  /* Override display: table in ScrollArea components */
+  [data-slot="scroll-area"] div[style*="display: table"],
+  [data-slot="scroll-area"] div[style*="display: table-cell"],
+  [data-slot="scroll-area-viewport"] div[style*="display: table"],
+  [data-slot="scroll-area-viewport"] div[style*="display: table-cell"] {
+    display: flex !important;
+    flex-direction: column !important;
   }
 }

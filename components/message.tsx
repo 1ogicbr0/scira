@@ -771,7 +771,9 @@ export const Message: React.FC<MessageProps> = ({
         )}
 
         {/* Sources panel control */}
-        {onSourcesClick && (() => {
+        {React.useMemo(() => {
+          if (!onSourcesClick) return null;
+          
           // Extract sources from tool invocations
           const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
           const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
@@ -818,10 +820,54 @@ export const Message: React.FC<MessageProps> = ({
                   });
                 });
               }
+              // Handle academic search results
+              else if (toolInvocation.toolName === 'academic_search' && toolInvocation.result.results) {
+                toolInvocation.result.results.forEach((result: any) => {
+                  allSources.push({
+                    url: result.url,
+                    title: result.title || new URL(result.url).hostname,
+                    text: result.summary || result.content || result.text,
+                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                  });
+                });
+              }
+              // Handle YouTube search results
+              else if (toolInvocation.toolName === 'youtube_search' && toolInvocation.result.results) {
+                toolInvocation.result.results.forEach((result: any) => {
+                  allSources.push({
+                    url: result.url,
+                    title: result.title || new URL(result.url).hostname,
+                    text: result.summary || result.description || result.content,
+                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=youtube.com`
+                  });
+                });
+              }
+              // Handle Reddit search results
+              else if (toolInvocation.toolName === 'reddit_search' && toolInvocation.result.results) {
+                toolInvocation.result.results.forEach((result: any) => {
+                  allSources.push({
+                    url: result.url,
+                    title: result.title || new URL(result.url).hostname,
+                    text: result.content || result.text,
+                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=reddit.com`
+                  });
+                });
+              }
+              // Handle X/Twitter search results
+              else if (toolInvocation.toolName === 'x_search' && toolInvocation.result.sources) {
+                toolInvocation.result.sources.forEach((source: any) => {
+                  allSources.push({
+                    url: source.url,
+                    title: source.title || new URL(source.url).hostname,
+                    text: source.content || source.text,
+                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=x.com`
+                  });
+                });
+              }
             }
           });
           
-          // Auto-open sources panel only if all tool invocations are complete, sources exist, and this is the last message
+          // Store sources for auto-opening
           if (allSources.length > 0 && isLastMessage && allToolInvocationsComplete) {
             // Use setTimeout to ensure the component has rendered
             setTimeout(() => {
@@ -829,91 +875,27 @@ export const Message: React.FC<MessageProps> = ({
             }, 500);
           }
           
-          // Show left arrow button if sources exist
-          return allSources.length > 0;
-        })() && (
-          <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => {
-                // Extract sources from tool invocations
-                const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
-                const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
-                
-                toolInvocationParts.forEach((part: any) => {
-                  const toolInvocation = part.toolInvocation;
-                  if (toolInvocation?.state === 'result' && toolInvocation.result) {
-                    // Handle extreme search results
-                    if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
-                      toolInvocation.result.research.sources.forEach((source: any) => {
-                        allSources.push({
-                          url: source.url,
-                          title: source.title || new URL(source.url).hostname,
-                          text: source.text || source.content,
-                          favicon: source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`
-                        });
-                      });
-                    }
-                    // Handle multi search results
-                    else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
-                      toolInvocation.result.searches.forEach((search: any) => {
-                        search.results?.forEach((result: any) => {
-                          allSources.push({
-                            url: result.url,
-                            title: result.title || new URL(result.url).hostname,
-                            text: result.content || result.text,
-                            favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
-                          });
-                        });
-                      });
-                    }
-                    // Handle web search results
-                    else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
-                      toolInvocation.result.results.forEach((result: any) => {
-                        allSources.push({
-                          url: result.url,
-                          title: result.title || new URL(result.url).hostname,
-                          text: result.content || result.text,
-                          favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
-                        });
-                      });
-                    }
+          // Return the button if sources exist
+          return allSources.length > 0 ? (
+            <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  if (allSources.length > 0) {
+                    onSourcesClick(allSources, true, message.id); // forceOpen = true for manual clicks, pass messageId
                   }
-                });
-                
-                if (allSources.length > 0) {
-                  onSourcesClick(allSources, true, message.id); // forceOpen = true for manual clicks, pass messageId
-                }
-              }}
-              className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-              title={`View ${(() => {
-                // Count sources from tool invocations
-                const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
-                let sourceCount = 0;
-                
-                toolInvocationParts.forEach((part: any) => {
-                  const toolInvocation = part.toolInvocation;
-                  if (toolInvocation?.state === 'result' && toolInvocation.result) {
-                    if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
-                      sourceCount += toolInvocation.result.research.sources.length;
-                    } else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
-                      toolInvocation.result.searches.forEach((search: any) => {
-                        sourceCount += search.results?.length || 0;
-                      });
-                    } else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
-                      sourceCount += toolInvocation.result.results.length;
-                    }
-                  }
-                });
-                
-                return sourceCount;
-              })()} sources`}
-            >
-              <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
-            </Button>
-          </div>
-        )}
+                }}
+                className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                title={`View ${allSources.length} sources`}
+              >
+                <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+              </Button>
+            </div>
+          ) : null;
+        }, [message.parts, onSourcesClick, isLastMessage, message.id])}
+
+
 
         {suggestedQuestions.length > 0 && (user || selectedVisibilityType === 'private') && status !== 'streaming' && (
           <div className="w-full max-w-xl sm:max-w-2xl mt-4">

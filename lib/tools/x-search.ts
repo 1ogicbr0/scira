@@ -4,7 +4,7 @@ import { serverEnv } from '@/env/server';
 import { getTweet } from 'react-tweet/api';
 
 export const xSearchTool = tool({
-  description: 'Search X (formerly Twitter) posts using xAI Live Search.',
+  description: 'Search X (formerly Twitter) posts using Groq AI.',
   parameters: z.object({
     query: z.string().describe('The search query for X posts').nullable(),
     startDate: z
@@ -53,14 +53,14 @@ export const xSearchTool = tool({
       console.log('[X search parameters]: ', searchParameters);
       console.log('[X search handles]: ', xHandles);
 
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${serverEnv.XAI_API_KEY}`,
+          Authorization: `Bearer ${serverEnv.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'grok-3-latest',
+          model: 'llama-3.3-70b-versatile',
           messages: [
             {
               role: 'system',

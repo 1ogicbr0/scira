@@ -27,12 +27,16 @@ const queryClient = new QueryClient({
   },
 });
 
+import { SessionProvider } from '@/lib/session-context';
+
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <PostHogProvider client={posthog}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <TooltipProvider>{children}</TooltipProvider>
+          <SessionProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </SessionProvider>
         </ThemeProvider>
       </PostHogProvider>
     </QueryClientProvider>

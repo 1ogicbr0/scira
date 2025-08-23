@@ -26,6 +26,9 @@ const AcademicSourceCard: React.FC<{
   paper: AcademicResult;
   onClick?: () => void;
 }> = ({ paper, onClick }) => {
+  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+  
   // Format authors for display
   const formatAuthors = (author: string | null | undefined) => {
     if (!author) return null;
@@ -34,6 +37,14 @@ const AcademicSourceCard: React.FC<{
   };
 
   const formattedAuthors = formatAuthors(paper.author);
+  
+  // Get hostname for favicon
+  let hostname = '';
+  try {
+    hostname = new URL(paper.url).hostname.replace('www.', '');
+  } catch {
+    hostname = 'example.com';
+  }
 
   return (
     <div
@@ -48,8 +59,25 @@ const AcademicSourceCard: React.FC<{
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        <div className="relative w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center shrink-0">
-          <Book className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+        <div className="relative w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center overflow-hidden shrink-0">
+          {!imageLoaded && <div className="absolute inset-0 animate-pulse" />}
+          {!imageError ? (
+            <img
+              src={`https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(hostname)}`}
+              alt=""
+              className={cn('w-5 h-5 object-contain', !imageLoaded && 'opacity-0')}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => {
+                setImageLoaded(true);
+                setImageError(true);
+              }}
+            />
+          ) : (
+            <Book className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+          )}
+          {imageLoaded && !imageError && (
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
