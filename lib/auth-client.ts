@@ -8,3 +8,6 @@ export const authClient = createAuthClient({
 });
 
 export const { signIn, signOut, signUp, useSession } = authClient;
+
+// Export betterauthClient for compatibility with existing code
+export const betterauthClient = authClient;

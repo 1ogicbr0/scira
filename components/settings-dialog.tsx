@@ -49,6 +49,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 import { useFastProStatus } from '@/hooks/use-user-data';
+import { useAppSession } from '@/lib/session-context';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -886,6 +887,7 @@ function MemoriesSection() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingMemoryIds, setDeletingMemoryIds] = useState<Set<string>>(new Set());
+  const { user } = useAppSession();
 
   const {
     data: memoriesData,
@@ -893,6 +895,7 @@ function MemoriesSection() {
     hasNextPage,
     isFetchingNextPage,
     isLoading: memoriesLoading,
+    error: memoriesError,
   } = useInfiniteQuery({
     queryKey: ['memories'],
     queryFn: async ({ pageParam }) => {
@@ -905,6 +908,7 @@ function MemoriesSection() {
       return hasMore ? Number(lastPage.memories[lastPage.memories.length - 1]?.id) : undefined;
     },
     staleTime: 1000 * 60 * 5,
+    enabled: !!user, // Only fetch if user is authenticated
   });
 
   const {
@@ -973,6 +977,33 @@ function MemoriesSection() {
     if (memory.name) return memory.name;
     return 'No content available';
   };
+
+  // Show authentication message if user is not authenticated
+  if (!user) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Memories</h3>
+            <p className="text-sm text-muted-foreground">
+              Your personal memory companion powered by AI
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Memory className="h-12 w-12 text-muted-foreground mb-4" />
+          <h4 className="text-lg font-medium mb-2">Authentication Required</h4>
+          <p className="text-sm text-muted-foreground mb-4">
+            Please sign in to access your memories
+          </p>
+          <Button asChild>
+            <Link href="/sign-in">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const displayedMemories =
     searchQuery.trim() && searchResults
@@ -1152,7 +1183,7 @@ export function SettingsDialog({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="h-[85vh] max-h-[600px] p-0 [&[data-vaul-drawer]]:transition-none overflow-hidden">
+        <DrawerContent className="h-[85vh] max-h-[600px] p-0 [&[data-vaul-drawer]]:transition-none overflow-hidden !border-2 !border-gray-300 dark:!border-gray-600">
           <div className="flex flex-col h-full max-h-full">
             {/* Header - more compact */}
             <DrawerHeader className="pb-2 px-4 pt-3 shrink-0">
@@ -1200,7 +1231,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-4xl !w-full max-h-[85vh] !p-0 gap-0 overflow-hidden">
+      <DialogContent className="!max-w-4xl !w-full max-h-[85vh] !p-0 gap-0 overflow-hidden !border-2 !border-gray-300 dark:!border-gray-600">
         <DialogHeader className="p-4 !m-0">
           <DialogTitle className="text-xl font-medium tracking-normal">Settings</DialogTitle>
         </DialogHeader>

@@ -24,6 +24,7 @@ import {
   Search as MagnifyingGlass,
   User,
   AlertCircle,
+  CreditCard,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -47,6 +48,7 @@ import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 
 import { toast } from 'sonner';
 import { useAppSession } from '@/lib/session-context';
+import { SettingsDialog } from '@/components/settings-dialog';
 
 interface Thread {
   id: string;
@@ -444,6 +446,10 @@ export function Sidebar({
                     <Settings className="w-3 h-3 mr-2" />
                     Settings
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/pricing')}>
+                    <CreditCard className="w-3 h-3 mr-2" />
+                    Pricing
+                  </DropdownMenuItem>
                   <DropdownMenuItem>
                     <HelpCircle className="w-3 h-3 mr-2" />
                     Help & Support
@@ -511,50 +517,16 @@ export function Sidebar({
         </div>
 
         {/* Settings Dialog */}
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="text-base">Settings</DialogTitle>
-              <DialogDescription className="text-xs">
-                Customize your CodeBlaze experience
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium">Theme</label>
-                <div className="flex gap-1.5 mt-1.5">
-                  <Button
-                    variant={theme === 'light' ? 'codeblaze' : 'codeblaze-outline'}
-                    size="sm"
-                    onClick={() => setTheme('light')}
-                    className="text-xs"
-                  >
-                    <Sun className="w-3 h-3 mr-1" />
-                    Light
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'codeblaze' : 'codeblaze-outline'}
-                    size="sm"
-                    onClick={() => setTheme('dark')}
-                    className="text-xs"
-                  >
-                    <Moon className="w-3 h-3 mr-1" />
-                    Dark
-                  </Button>
-                  <Button
-                    variant={theme === 'system' ? 'codeblaze' : 'codeblaze-outline'}
-                    size="sm"
-                    onClick={() => setTheme('system')}
-                    className="text-xs"
-                  >
-                    <Monitor className="w-3 h-3 mr-1" />
-                    System
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <SettingsDialog
+          open={showSettings}
+          onOpenChange={setShowSettings}
+          user={user}
+          subscriptionData={null}
+          isProUser={false}
+          isProStatusLoading={false}
+          isCustomInstructionsEnabled={true}
+          setIsCustomInstructionsEnabled={() => {}}
+        />
       </div>
     </>
   );

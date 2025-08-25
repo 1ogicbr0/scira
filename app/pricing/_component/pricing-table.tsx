@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { authClient, betterauthClient } from '@/lib/auth-client';
+import { authClient } from '@/lib/auth-client';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -113,7 +113,8 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
           products: [productId],
           slug: slug,
         };
-        await authClient.checkout(checkoutOptions);
+        // TODO: Implement proper checkout functionality
+        toast.error('Checkout functionality not available. Please contact support.');
       }
     } catch (error) {
       console.error('Checkout failed:', error);
@@ -126,10 +127,12 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
       const proSource = getProAccessSource();
       if (proSource === 'dodo') {
         // Use DodoPayments portal for DodoPayments users
-        await betterauthClient.dodopayments.customer.portal();
+        // TODO: Implement DodoPayments portal access
+        toast.error('DodoPayments portal access not available. Please contact support.');
       } else {
         // Use Polar portal for Polar subscribers
-        await authClient.customer.portal();
+        // TODO: Implement proper customer portal access
+        toast.error('Customer portal access not available. Please contact support.');
       }
     } catch (error) {
       console.error('Failed to open customer portal:', error);
@@ -563,7 +566,7 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
                   onClick={() => handleCheckout(STARTER_TIER, STARTER_SLUG)}
                   disabled={location.loading}
                 >
-                  {isAuthenticated === false ? 'Sign in to upgrade' : 'Upgrade to Ola Pro'}
+                  {!user ? 'Sign in to upgrade' : 'Upgrade to Ola Pro'}
                   <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
                 </Button>
               )}
@@ -587,11 +590,11 @@ export default function PricingTable({ subscriptionDetails, user }: PricingTable
             <div className="flex-1">
               <h3 className="font-semibold mb-2 text-zinc-900 dark:text-zinc-100">Student Discount Available</h3>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                Students can get the Pro plan for just $5/month (₹500/month). Email zaid@scira.ai with your student
-                verification and a brief description of how you use Scira for your studies.
+                Students can get the Pro plan for just $5/month (₹500/month). Email zaid@ola.ai with your student
+                verification and a brief description of how you use Ola for your studies.
               </p>
               <a
-                href="mailto:zaid@scira.ai?subject=Student%20Discount%20Request"
+                href="mailto:zaid@ola.ai?subject=Student%20Discount%20Request"
                 className="inline-flex items-center justify-center h-9 px-4 rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-sm font-medium transition-colors"
               >
                 Apply for Student Discount
