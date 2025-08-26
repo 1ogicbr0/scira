@@ -25,7 +25,7 @@ interface Place {
   formatted_address?: string;
   rating?: number;
   reviews_count?: number;
-  price_level?: number;
+  price_level?: number | string; // Allow both number and string
   description?: string;
   photos?: Photo[];
   is_closed?: boolean;
@@ -42,6 +42,10 @@ interface Place {
   distance?: number;
   bearing?: string;
   timezone?: string;
+  // Add the missing properties from nearby-discovery - make them optional for compatibility
+  category?: string;
+  category_icon?: string;
+  category_type?: string;
 }
 
 // Set Mapbox token with fallback

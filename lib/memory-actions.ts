@@ -4,8 +4,8 @@ import { getUser } from '@/lib/auth-utils';
 import { serverEnv } from '@/env/server';
 import MemoryClient from 'mem0ai';
 
-// Initialize the memory client with API key
-const memoryClient = new MemoryClient({ apiKey: serverEnv.MEM0_API_KEY || '' });
+// Initialize the memory client with API key (will be checked before use)
+const memoryClient = serverEnv.MEM0_API_KEY ? new MemoryClient({ apiKey: serverEnv.MEM0_API_KEY }) : null;
 
 // Define the types based on actual API responses
 export interface MemoryItem {
@@ -33,6 +33,10 @@ export interface MemoryResponse {
  * Add a memory for the authenticated user
  */
 export async function addMemory(content: string) {
+  if (!memoryClient) {
+    throw new Error('Memory service is not configured. Please set MEM0_API_KEY environment variable.');
+  }
+
   const user = await getUser();
 
   if (!user) {
@@ -65,6 +69,10 @@ export async function addMemory(content: string) {
  * Returns a consistent MemoryResponse format with memories array and total count
  */
 export async function searchMemories(query: string, page = 1, pageSize = 20): Promise<MemoryResponse> {
+  if (!memoryClient) {
+    throw new Error('Memory service is not configured. Please set MEM0_API_KEY environment variable.');
+  }
+
   const user = await getUser();
 
   if (!user) {
@@ -142,6 +150,10 @@ export async function searchMemories(query: string, page = 1, pageSize = 20): Pr
  * Returns a consistent MemoryResponse format with memories array and total count
  */
 export async function getAllMemories(page = 1, pageSize = 20): Promise<MemoryResponse> {
+  if (!memoryClient) {
+    throw new Error('Memory service is not configured. Please set MEM0_API_KEY environment variable.');
+  }
+
   const user = await getUser();
 
   if (!user) {
@@ -207,6 +219,10 @@ export async function getAllMemories(page = 1, pageSize = 20): Promise<MemoryRes
  * Delete a memory by ID
  */
 export async function deleteMemory(memoryId: string) {
+  if (!memoryClient) {
+    throw new Error('Memory service is not configured. Please set MEM0_API_KEY environment variable.');
+  }
+
   const user = await getUser();
 
   if (!user) {

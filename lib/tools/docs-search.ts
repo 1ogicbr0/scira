@@ -106,11 +106,11 @@ export const docsSearchTool = (dataStream: DataStreamWriter) =>
           
           // Determine content type
           let contentType = 'reference';
-          if (content.includes('tutorial') || result.title.toLowerCase().includes('tutorial')) contentType = 'tutorial';
-          else if (content.includes('guide') || result.title.toLowerCase().includes('guide')) contentType = 'guide';
-          else if (content.includes('example') || result.title.toLowerCase().includes('example')) contentType = 'example';
-          else if (content.includes('api') || result.title.toLowerCase().includes('api')) contentType = 'api';
-          else if (content.includes('getting started') || result.title.toLowerCase().includes('getting started')) contentType = 'getting_started';
+          if (content.includes('tutorial') || (result.title || '').toLowerCase().includes('tutorial')) contentType = 'tutorial';
+          else if (content.includes('guide') || (result.title || '').toLowerCase().includes('guide')) contentType = 'guide';
+          else if (content.includes('example') || (result.title || '').toLowerCase().includes('example')) contentType = 'example';
+          else if (content.includes('api') || (result.title || '').toLowerCase().includes('api')) contentType = 'api';
+          else if (content.includes('getting started') || (result.title || '').toLowerCase().includes('getting started')) contentType = 'getting_started';
 
           // Extract code examples
           const codeBlocks = content.match(/```[\s\S]*?```|`[^`]+`/g) || [];

@@ -53,7 +53,7 @@ export const v0SearchTool = (dataStream: DataStreamWriter) =>
           const content = result.text || '';
           
           // Detect framework/library mentions
-          const frameworks = [];
+          const frameworks: string[] = [];
           if (content.includes('React') || content.includes('react')) frameworks.push('React');
           if (content.includes('Next.js') || content.includes('nextjs')) frameworks.push('Next.js');
           if (content.includes('TypeScript') || content.includes('typescript')) frameworks.push('TypeScript');

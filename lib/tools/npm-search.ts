@@ -74,11 +74,11 @@ export const npmSearchTool = (dataStream: DataStreamWriter) =>
           const license = licenseMatch ? licenseMatch[1] : null;
 
           // Extract keywords/tags
-          const keywords = [];
+          const keywords: string[] = [];
           const commonKeywords = ['react', 'vue', 'angular', 'node', 'express', 'typescript', 'babel', 'webpack', 'rollup', 'vite', 'jest', 'testing', 'ui', 'component', 'utility', 'framework', 'library'];
           
           commonKeywords.forEach(keyword => {
-            if (content.toLowerCase().includes(keyword) || result.title.toLowerCase().includes(keyword)) {
+            if (content.toLowerCase().includes(keyword) || (result.title || '').toLowerCase().includes(keyword)) {
               keywords.push(keyword);
             }
           });

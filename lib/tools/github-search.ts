@@ -64,11 +64,11 @@ export const githubSearchTool = (dataStream: DataStreamWriter) =>
           const content = result.text || '';
           
           // Extract programming languages and technologies
-          const languages = [];
+          const languages: string[] = [];
           const techKeywords = ['JavaScript', 'TypeScript', 'Python', 'React', 'Vue', 'Angular', 'Node.js', 'Express', 'Next.js', 'Svelte', 'Go', 'Rust', 'Java', 'C++', 'PHP', 'Ruby', 'Swift', 'Kotlin', 'Flutter', 'Django', 'Flask', 'Rails'];
           
           techKeywords.forEach(tech => {
-            if (content.toLowerCase().includes(tech.toLowerCase()) || result.title.toLowerCase().includes(tech.toLowerCase())) {
+            if (content.toLowerCase().includes(tech.toLowerCase()) || (result.title || '').toLowerCase().includes(tech.toLowerCase())) {
               languages.push(tech);
             }
           });

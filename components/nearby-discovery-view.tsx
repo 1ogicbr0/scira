@@ -24,22 +24,34 @@ interface Photo {
 }
 
 interface Place {
-  place_id: string;
   name: string;
-  category: string;
-  category_icon: string;
-  category_type: string;
-  formatted_address: string;
   location: Location;
-  distance: number;
+  place_id: string;
+  vicinity?: string;
+  formatted_address?: string;
   rating?: number;
-  price_level?: string;
-  is_open?: boolean;
+  reviews_count?: number;
+  price_level?: number | string; // Allow both number and string
+  description?: string;
   photos?: Photo[];
+  is_closed?: boolean;
+  is_open?: boolean;
+  next_open_close?: string;
+  type?: string;
+  types?: string[];
+  cuisine?: string;
+  source?: string;
   phone?: string;
   website?: string;
+  hours?: string[];
   opening_hours?: string[];
-  source: string;
+  distance?: number;
+  bearing?: string;
+  timezone?: string;
+  // Add the missing properties from nearby-discovery - keep them optional for backward compatibility
+  category?: string;
+  category_icon?: string;
+  category_type?: string;
 }
 
 interface CategoryData {
@@ -165,7 +177,7 @@ const CategorySection = memo(({ categoryData, onPlaceClick }: {
                       <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                         <div className="flex items-center gap-1">
                           <Navigation className="h-3 w-3" />
-                          <span>{formatDistance(place.distance)}</span>
+                          <span>{formatDistance(place.distance || 0)}</span>
                         </div>
                         {place.price_level && place.price_level !== 'Not Available' && (
                           <div className="flex items-center gap-1">
@@ -223,6 +235,10 @@ const NearbyDiscoveryView = memo<NearbyDiscoveryViewProps>(({
   const handlePlaceClick = useCallback((place: Place) => {
     setSelectedPlace(place);
     setViewMode('map');
+  }, []);
+
+  const handlePlaceSelect = useCallback((place: Place | null) => {
+    setSelectedPlace(place);
   }, []);
 
   if (!success) {
@@ -303,7 +319,7 @@ const NearbyDiscoveryView = memo<NearbyDiscoveryViewProps>(({
             />
             <InsightCard
               title="Closest"
-              value={insights.closest_place ? formatDistance(insights.closest_place.distance) : 'N/A'}
+              value={insights.closest_place ? formatDistance(insights.closest_place.distance || 0) : 'N/A'}
               icon={Clock}
               description={insights.closest_place?.name}
             />
@@ -402,7 +418,7 @@ const NearbyDiscoveryView = memo<NearbyDiscoveryViewProps>(({
                 center={center}
                 places={all_places}
                 selectedPlace={selectedPlace}
-                onPlaceSelect={setSelectedPlace}
+                onPlaceSelect={handlePlaceSelect}
               />
               
               {/* Selected Place Overlay */}

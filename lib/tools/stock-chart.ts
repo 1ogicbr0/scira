@@ -99,7 +99,7 @@ export const stockChartTool = tool({
 
     const tvly = tavily({ apiKey: serverEnv.TAVILY_API_KEY });
 
-    const searchPromises = [];
+    const searchPromises: Array<{ query: string; topic: string; promise: Promise<any> }> = [];
     for (const query of news_queries) {
       searchPromises.push({
         query,
@@ -139,12 +139,12 @@ export const stockChartTool = tool({
       if (!result.results) return;
 
       const processedResults = result.results
-        .filter((item) => {
+        .filter((item: any) => {
           if (urlSet.has(item.url)) return false;
           urlSet.add(item.url);
           return true;
         })
-        .map((item) => ({
+        .map((item: any) => ({
           title: item.title,
           url: item.url,
           content: item.content.slice(0, 30000),

@@ -22,16 +22,18 @@ interface Place {
   name: string;
   location: Location;
   place_id: string;
-  vicinity: string;
+  vicinity?: string; // Make optional to match other interfaces
+  formatted_address?: string; // Add this property
   rating?: number;
   reviews_count?: number;
-  price_level?: number;
+  price_level?: number | string; // Allow both number and string
   description?: string;
   photos?: Photo[];
   is_closed?: boolean;
   is_open?: boolean;
   next_open_close?: string;
   type?: string;
+  types?: string[]; // Add this property
   cuisine?: string;
   source?: string;
   phone?: string;
@@ -41,6 +43,10 @@ interface Place {
   distance?: number;
   bearing?: string;
   timezone?: string;
+  // Add the missing properties from nearby-discovery
+  category?: string;
+  category_icon?: string;
+  category_type?: string;
 }
 
 interface PlaceCardProps {
@@ -142,10 +148,21 @@ const PlaceCard: React.FC<PlaceCardProps> = ({ place, onClick, isSelected = fals
     };
   };
 
-  // Convert Google Places price level (0-4) to dollar signs
-  const getPriceLevelDisplay = (priceLevel?: number): string => {
+  // Convert Google Places price level (0-4) to dollar signs or handle formatted strings
+  const getPriceLevelDisplay = (priceLevel?: number | string): string => {
     if (priceLevel === undefined || priceLevel === null) return '';
-    return '$'.repeat(Math.max(1, Math.min(4, priceLevel)));
+    
+    // If it's already a formatted string, return it as is
+    if (typeof priceLevel === 'string') {
+      return priceLevel;
+    }
+    
+    // If it's a number, convert to dollar signs
+    if (typeof priceLevel === 'number') {
+      return '$'.repeat(Math.max(1, Math.min(4, priceLevel)));
+    }
+    
+    return '';
   };
 
   const statusDisplay = getStatusDisplay();

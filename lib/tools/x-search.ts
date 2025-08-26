@@ -83,7 +83,7 @@ export const xSearchTool = tool({
 
       console.log('[X search data]: ', data);
 
-      const sources = [];
+      const sources: any[] = [];
       const citations = data.citations || [];
 
       if (citations.length > 0) {

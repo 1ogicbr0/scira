@@ -373,9 +373,19 @@ const ChatInterface = memo(
     useEffect(() => {
       if (data && Array.isArray(data)) {
         data.forEach((item) => {
-          if (item.type === 'suggested-questions' && item.questions) {
+          if (
+            item && 
+            typeof item === 'object' && 
+            !Array.isArray(item) && 
+            'type' in item && 
+            item.type === 'suggested-questions' && 
+            'questions' in item && 
+            item.questions &&
+            Array.isArray(item.questions) &&
+            item.questions.every(q => typeof q === 'string')
+          ) {
             console.log('Received suggested questions from stream:', item.questions);
-            dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: item.questions });
+            dispatch({ type: 'SET_SUGGESTED_QUESTIONS', payload: item.questions as string[] });
           }
         });
       }

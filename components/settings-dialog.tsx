@@ -403,21 +403,12 @@ function SubscriptionSection({ subscriptionData, isProUser, user }: any) {
     const fetchPolarOrders = async () => {
       try {
         setOrdersLoading(true);
-
-        // Only fetch Polar orders (DodoPayments data comes from user cache)
-        const ordersResponse = await authClient.customer.orders
-          .list({
-            query: {
-              page: 1,
-              limit: 10,
-              productBillingType: 'recurring',
-            },
-          })
-          .catch(() => ({ data: null }));
-
-        setOrders(ordersResponse.data);
+        
+        // Polar orders functionality is not available in current authClient
+        // Only DodoPayments is supported
+        setOrders(null);
       } catch (error) {
-        console.log('Failed to fetch Polar orders:', error);
+        console.log('Failed to fetch orders:', error);
         setOrders(null);
       } finally {
         setOrdersLoading(false);
@@ -428,47 +419,22 @@ function SubscriptionSection({ subscriptionData, isProUser, user }: any) {
   }, []);
 
   const handleManageSubscription = async () => {
-    // Determine the subscription source
-    const getProAccessSource = () => {
-      if (hasActiveSubscription) return 'polar';
-      if (hasDodoProStatus) return 'dodo';
-      return null;
-    };
-
-    const proSource = getProAccessSource();
-
-    console.log('proSource', proSource);
+    // Only DodoPayments is supported in current setup
+    const hasDodoProStatus = dodoProStatus?.isProUser;
 
     try {
       setIsManagingSubscription(true);
 
-      console.log('Settings Dialog - Provider source:', proSource);
-      console.log('User dodoProStatus:', user?.dodoProStatus);
-      console.log('User full object keys:', Object.keys(user || {}));
-
-      if (proSource === 'dodo') {
+      if (hasDodoProStatus) {
         // Use DodoPayments portal for DodoPayments users
         console.log('Opening DodoPayments portal');
-        console.log('User object for DodoPayments:', {
-          id: user?.id,
-          email: user?.email,
-          dodoProStatus: user?.dodoProStatus,
-          isProUser: user?.isProUser,
-        });
         await betterauthClient.dodopayments.customer.portal();
       } else {
-        // Use Polar portal for Polar subscribers
-        console.log('Opening Polar portal');
-        await authClient.customer.portal();
+        toast.error('No active subscription found');
       }
     } catch (error) {
       console.error('Subscription management error:', error);
-
-      if (proSource === 'dodo') {
-        toast.error('Unable to access DodoPayments portal. Please contact support at zaid@scira.ai');
-      } else {
-        toast.error('Failed to open subscription management');
-      }
+      toast.error('Unable to access subscription portal. Please contact support at zaid@scira.ai');
     } finally {
       setIsManagingSubscription(false);
     }

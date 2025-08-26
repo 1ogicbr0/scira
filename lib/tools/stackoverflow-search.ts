@@ -72,7 +72,7 @@ export const stackOverflowSearchTool = (dataStream: DataStreamWriter) =>
           const questionId = questionIdMatch ? questionIdMatch[1] : null;
 
           // Clean and format the title
-          const title = result.title.replace(/^\[.*?\]\s*/, ''); // Remove leading tags
+          const title = (result.title || '').replace(/^\[.*?\]\s*/, ''); // Remove leading tags
           
           // Extract key information from content
           const content = result.text || '';
@@ -84,7 +84,7 @@ export const stackOverflowSearchTool = (dataStream: DataStreamWriter) =>
           const codeBlocks = content.match(/```[\s\S]*?```|`[^`]+`/g) || [];
           
           // Extract tags from title or content
-          const extractedTags = [...(result.title.match(/\[([^\]]+)\]/g) || [])].map(tag => 
+          const extractedTags = [...((result.title || '').match(/\[([^\]]+)\]/g) || [])].map(tag => 
             tag.replace(/[\[\]]/g, '')
           );
 

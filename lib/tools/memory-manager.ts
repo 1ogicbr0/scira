@@ -12,6 +12,15 @@ export const memoryManagerTool = tool({
     query: z.string().describe('The search query for search operations'),
   }),
   execute: async ({ action, content, query }: { action: 'add' | 'search'; content?: string; query?: string }) => {
+    // Check if mem0 API key is configured
+    if (!serverEnv.MEM0_API_KEY || serverEnv.MEM0_API_KEY === '') {
+      return {
+        success: false,
+        action,
+        message: 'Memory service is not configured. Please set MEM0_API_KEY environment variable.',
+      };
+    }
+
     const client = new MemoryClient({ apiKey: serverEnv.MEM0_API_KEY });
     const user = await getCurrentUser();
     let userId = user?.id;

@@ -97,7 +97,7 @@ function getTrailingMessageId({ messages }: { messages: Array<ResponseMessage> }
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
-function getStreamContext() {
+function getStreamContext(): ResumableStreamContext | null {
   // Disable Redis streaming completely
   return null;
 }
@@ -734,10 +734,10 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('=== API Error Debug Info ===');
     console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      cause: error.cause,
-      stack: error.stack
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      cause: error instanceof Error ? error.cause : undefined,
+      stack: error instanceof Error ? error.stack : undefined
     });
     console.error('========================');
     
@@ -762,6 +762,8 @@ export async function GET(request: Request) {
     return new Response(null, { status: 204 });
   }
 
+  // Since getStreamContext() always returns null, this code will never execute
+  // But we'll keep it for future use if resumable streams are re-enabled
   const { searchParams } = new URL(request.url);
   const chatId = searchParams.get('chatId');
 
@@ -807,7 +809,8 @@ export async function GET(request: Request) {
     execute: () => {},
   });
 
-  const stream = await streamContext.resumableStream(recentStreamId, () => emptyDataStream);
+  // Add type assertion since we know streamContext is not null at this point
+  const stream = await (streamContext as ResumableStreamContext).resumableStream(recentStreamId, () => emptyDataStream);
 
   /*
    * For when the generation is streaming during SSR

@@ -71,20 +71,20 @@ export const devCommunitySearchTool = (dataStream: DataStreamWriter) =>
           if (platform === 'Reddit') {
             if (url.includes('/comments/')) contentType = 'discussion';
             else contentType = 'post';
-          } else if (content.includes('tutorial') || result.title.toLowerCase().includes('tutorial')) {
+          } else if (content.includes('tutorial') || (result.title || '').toLowerCase().includes('tutorial')) {
             contentType = 'tutorial';
-          } else if (content.includes('guide') || result.title.toLowerCase().includes('guide')) {
+          } else if (content.includes('guide') || (result.title || '').toLowerCase().includes('guide')) {
             contentType = 'guide';
-          } else if (content.includes('tips') || result.title.toLowerCase().includes('tips')) {
+          } else if (content.includes('tips') || (result.title || '').toLowerCase().includes('tips')) {
             contentType = 'tips';
           }
 
           // Extract programming languages and technologies
-          const technologies = [];
+          const technologies: string[] = [];
           const techKeywords = ['JavaScript', 'TypeScript', 'Python', 'React', 'Vue', 'Angular', 'Node.js', 'Express', 'Next.js', 'Svelte', 'Go', 'Rust', 'Java', 'C++', 'PHP', 'Ruby', 'Swift', 'Kotlin', 'Flutter', 'Django', 'Flask', 'Rails', 'AWS', 'Docker', 'Kubernetes'];
           
           techKeywords.forEach(tech => {
-            if (content.toLowerCase().includes(tech.toLowerCase()) || result.title.toLowerCase().includes(tech.toLowerCase())) {
+            if (content.toLowerCase().includes(tech.toLowerCase()) || (result.title || '').toLowerCase().includes(tech.toLowerCase())) {
               technologies.push(tech);
             }
           });

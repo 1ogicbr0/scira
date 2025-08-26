@@ -7,7 +7,7 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import { useAppSession } from '@/lib/session-context';
 import { v4 as uuidv4 } from 'uuid';
 
-const Home = () => {
+const SearchParamsWrapper = () => {
   const searchParams = useSearchParams();
   const newChatId = searchParams.get('newChat');
   const { user, isAuthenticated, isLoading } = useAppSession();
@@ -21,9 +21,17 @@ const Home = () => {
   console.log('🔍 Home page - isLoading:', isLoading);
 
   return (
-    <Suspense>
+    <>
       <ChatInterface initialChatId={chatId} />
       <InstallPrompt />
+    </>
+  );
+};
+
+const Home = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SearchParamsWrapper />
     </Suspense>
   );
 };

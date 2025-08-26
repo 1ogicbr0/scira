@@ -10,6 +10,11 @@ interface PostMessageUpgradeDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface ApiAnnouncementDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
 export const PostMessageUpgradeDialog = React.memo(({ open, onOpenChange }: PostMessageUpgradeDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -177,6 +182,10 @@ interface ChatDialogsProps {
   setShowUpgradeDialog: (open: boolean) => void;
   hasShownUpgradeDialog: boolean;
   setHasShownUpgradeDialog: (value: boolean) => void;
+  showAnnouncementDialog: boolean;
+  setShowAnnouncementDialog: (open: boolean) => void;
+  hasShownAnnouncementDialog: boolean;
+  setHasShownAnnouncementDialog: (value: boolean) => void;
   user: any;
   setAnyDialogOpen: (open: boolean) => void;
 }
@@ -193,6 +202,10 @@ export const ChatDialogs = React.memo(
     setShowUpgradeDialog,
     hasShownUpgradeDialog,
     setHasShownUpgradeDialog,
+    showAnnouncementDialog,
+    setShowAnnouncementDialog,
+    hasShownAnnouncementDialog,
+    setHasShownAnnouncementDialog,
     user,
     setAnyDialogOpen,
   }: ChatDialogsProps) => {
@@ -226,6 +239,17 @@ export const ChatDialogs = React.memo(
             setShowUpgradeDialog(open);
             if (!open) {
               setHasShownUpgradeDialog(true);
+            }
+          }}
+        />
+
+        {/* API Announcement Dialog */}
+        <ApiAnnouncementDialog
+          open={showAnnouncementDialog}
+          onOpenChange={(open) => {
+            setShowAnnouncementDialog(open);
+            if (!open) {
+              setHasShownAnnouncementDialog(true);
             }
           }}
         />
