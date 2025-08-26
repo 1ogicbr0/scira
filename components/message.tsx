@@ -891,7 +891,7 @@ export const Message: React.FC<MessageProps> = ({
       )}
       
       {/* Sources button */}
-      <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50">
+      <div className="fixed right-4 z-50 md:top-1/2 md:transform md:-translate-y-1/2 top-4 md:top-1/2">
         <Button
           variant="outline"
           size="icon"
@@ -900,10 +900,10 @@ export const Message: React.FC<MessageProps> = ({
               onSourcesClick(sourcesData.sources, true, message.id);
             }
           }}
-          className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          className="w-12 h-12 md:w-10 md:h-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
           title={`View ${sourcesData.sources.length} sources`}
         >
-          <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+          <ChevronLeft className="w-6 h-6 md:w-5 md:h-5 text-muted-foreground dark:text-muted-foreground" />
         </Button>
       </div>
     </>

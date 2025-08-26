@@ -98,60 +98,56 @@ function ThreadItem({
     <div
       className={cn(
         'group relative flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors hover:bg-accent w-full max-w-full mr-2',
-        isActive && 'bg-accent border border-border'
+        isActive && 'bg-accent'
       )}
       onClick={onSelect}
     >
-      <div className="flex-1 min-w-0 max-w-full overflow-hidden" style={{ maxWidth: 'calc(100% - 28px)' }}>
-        <div className="flex items-start gap-1.5 min-w-0 max-w-full">
-          <h3 className="font-medium text-xs flex-1 min-w-0 max-w-full break-words leading-tight line-clamp-2">
-            {thread.title}
-          </h3>
-          {thread.isPinned && (
-            <Pin className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0 ml-1 mt-0.5" />
-          )}
+      <div className="flex-1 min-w-0 max-w-full">
+        <div className="flex items-center justify-between mb-1 w-full max-w-full">
+          <h3 className="text-xs font-medium truncate flex-1 min-w-0 max-w-full">{thread.title}</h3>
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+            {thread.isPinned && <Pin className="w-2.5 h-2.5 text-blue-500" />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="w-2.5 h-2.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPin(); }}>
+                  <Pin className="w-3 h-3 mr-2" />
+                  {thread.isPinned ? 'Unpin' : 'Pin'}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onArchive(); }}>
+                  <Archive className="w-3 h-3 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-3 h-3 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 min-w-0 max-w-full break-words leading-tight line-clamp-2">
-          {thread.lastMessage}
-        </p>
-        <div className="flex items-center gap-2 mt-1 min-w-0 max-w-full">
-          <span className="text-xs text-muted-foreground flex-1 min-w-0 max-w-full break-words">
-            {formatTimestamp(thread.timestamp)}
-          </span>
-          <Badge variant="secondary" className="text-xs px-1.5 py-0.5 flex-shrink-0">
-            {thread.messageCount}
-          </Badge>
+        <div className="flex items-center justify-between text-xs text-muted-foreground w-full max-w-full">
+          <p className="truncate flex-1 min-w-0 max-w-full">{thread.lastMessage}</p>
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+            <span>{formatTimestamp(thread.timestamp)}</span>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0.5 h-4">
+              {thread.messageCount}
+            </Badge>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex-shrink-0 w-6">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="w-3 h-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={onPin} className="cursor-pointer">
-              <Pin className="w-3 h-3 mr-2" />
-              {thread.isPinned ? 'Unpin' : 'Pin'}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onArchive} className="cursor-pointer">
-              <Archive className="w-3 h-3 mr-2" />
-              {thread.isArchived ? 'Unarchive' : 'Archive'}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="cursor-pointer text-red-600">
-              <Trash2 className="w-3 h-3 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
@@ -171,32 +167,38 @@ export function Sidebar({
   loading = false,
   error = null,
 }: SidebarProps) {
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAppSession();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAppSession();
 
-  // Debug session state
-  console.log('🔍 Sidebar user:', user);
-  console.log('🔍 Sidebar isAuthenticated:', isAuthenticated);
-  console.log('🔍 Sidebar isLoading:', isLoading);
-  console.log('🔍 Sidebar user name:', user?.name);
-
-  const filteredThreads = threads.filter(thread =>
+  const filteredThreads = threads.filter((thread) =>
     thread.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     thread.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const pinnedThreads = filteredThreads.filter(thread => thread.isPinned);
-  const regularThreads = filteredThreads.filter(thread => !thread.isPinned);
+  const pinnedThreads = filteredThreads.filter((thread) => thread.isPinned && !thread.isArchived);
+  const regularThreads = filteredThreads.filter((thread) => !thread.isPinned && !thread.isArchived);
 
-  // Debug logging
-  console.log('Sidebar threads:', threads);
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Failed to sign out');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
   console.log('Sidebar isOpen:', isOpen);
   console.log('Sidebar isCollapsed:', isCollapsed);
+  console.log('Sidebar threads:', threads);
   console.log('Sidebar currentThreadId:', currentThreadId);
   console.log('Sidebar filteredThreads:', filteredThreads);
   console.log('Sidebar pinnedThreads:', pinnedThreads);
@@ -259,7 +261,7 @@ export function Sidebar({
                   setIsCollapsed(newCollapsed);
                   onCollapsedChange?.(newCollapsed);
                 }}
-                className="h-6 w-6"
+                className="hidden lg:block h-6 w-6"
               >
                 <ChevronLeft className="w-3 h-3" />
               </Button>
@@ -349,70 +351,67 @@ export function Sidebar({
               {/* Error State */}
               {error && (
                 <div className="text-center py-8 w-full">
-                  <AlertCircle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-                  <p className="text-xs text-red-500">Error loading threads</p>
-                  <p className="text-xs text-muted-foreground mt-1">{error}</p>
+                  <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+                  <p className="text-xs text-destructive">{error}</p>
                 </div>
               )}
 
               {/* Pinned Threads */}
-              {!loading && !error && pinnedThreads.length > 0 && (
-                <>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium w-full">
-                    <Pin className="w-2.5 h-2.5 flex-shrink-0" />
-                    <span className="truncate">Pinned</span>
+              {pinnedThreads.length > 0 && (
+                <div className="space-y-1.5 w-full max-w-full">
+                  <div className="flex items-center gap-2 px-2 py-1">
+                    <Pin className="w-3 h-3 text-blue-500" />
+                    <span className="text-xs font-medium text-muted-foreground">Pinned</span>
                   </div>
-                  <div className="space-y-1 w-full max-w-full">
-                    {pinnedThreads.map((thread) => (
-                      <ThreadItem
-                        key={thread.id}
-                        thread={thread}
-                        isActive={currentThreadId === thread.id}
-                        onSelect={() => onThreadSelect(thread.id)}
-                        onDelete={() => onDeleteThread(thread.id)}
-                        onPin={() => onPinThread(thread.id)}
-                        onArchive={() => onArchiveThread(thread.id)}
-                        formatTimestamp={formatTimestamp}
-                      />
-                    ))}
-                  </div>
-                  <Separator className="my-2" />
-                </>
+                  {pinnedThreads.map((thread) => (
+                    <ThreadItem
+                      key={thread.id}
+                      thread={thread}
+                      isActive={currentThreadId === thread.id}
+                      onSelect={() => onThreadSelect(thread.id)}
+                      onDelete={() => onDeleteThread(thread.id)}
+                      onPin={() => onPinThread(thread.id)}
+                      onArchive={() => onArchiveThread(thread.id)}
+                      formatTimestamp={formatTimestamp}
+                    />
+                  ))}
+                  {regularThreads.length > 0 && <Separator className="my-3" />}
+                </div>
               )}
 
               {/* Regular Threads */}
               {regularThreads.length > 0 && (
-                <>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium w-full">
-                    <Clock className="w-2.5 h-2.5 flex-shrink-0" />
-                    <span className="truncate">Recent</span>
-                  </div>
-                  <div className="space-y-1 w-full max-w-full">
-                    {regularThreads.map((thread) => (
-                      <ThreadItem
-                        key={thread.id}
-                        thread={thread}
-                        isActive={currentThreadId === thread.id}
-                        onSelect={() => onThreadSelect(thread.id)}
-                        onDelete={() => onDeleteThread(thread.id)}
-                        onPin={() => onPinThread(thread.id)}
-                        onArchive={() => onArchiveThread(thread.id)}
-                        formatTimestamp={formatTimestamp}
-                      />
-                    ))}
-                  </div>
-                </>
+                <div className="space-y-1.5 w-full max-w-full">
+                  {pinnedThreads.length > 0 && (
+                    <div className="flex items-center gap-2 px-2 py-1">
+                      <MessageSquare className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">Recent</span>
+                    </div>
+                  )}
+                  {regularThreads.map((thread) => (
+                    <ThreadItem
+                      key={thread.id}
+                      thread={thread}
+                      isActive={currentThreadId === thread.id}
+                      onSelect={() => onThreadSelect(thread.id)}
+                      onDelete={() => onDeleteThread(thread.id)}
+                      onPin={() => onPinThread(thread.id)}
+                      onArchive={() => onArchiveThread(thread.id)}
+                      formatTimestamp={formatTimestamp}
+                    />
+                  ))}
+                </div>
               )}
 
               {/* Empty State */}
               {!loading && !error && filteredThreads.length === 0 && (
                 <div className="text-center py-8 w-full">
-                  <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">
-                    {searchQuery ? 'No threads found' : 'No conversations yet'}
+                  <MessageSquare className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {searchQuery ? 'No matching conversations' : 'No conversations yet'}
                   </p>
                   {!searchQuery && (
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground">
                       Start chatting to see your conversations here
                     </p>
                   )}
@@ -424,7 +423,7 @@ export function Sidebar({
 
         {/* Footer */}
         <div className="border-t border-border p-3">
-          {!isCollapsed &&  (
+          {!isCollapsed && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -450,55 +449,25 @@ export function Sidebar({
                     <CreditCard className="w-3 h-3 mr-2" />
                     Pricing
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <HelpCircle className="w-3 h-3 mr-2" />
-                    Help & Support
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/about')}>
                     <Info className="w-3 h-3 mr-2" />
                     About
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {isAuthenticated ? (
-                    <DropdownMenuItem 
-                      onClick={async () => {
-                        if (isSigningOut) return;
-                        setIsSigningOut(true);
-                        
-                        try {
-                          // Clear all cookies immediately when sign out is clicked
-                          document.cookie.split(";").forEach(function(c) { 
-                            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                          });
-                          
-                          toast.loading('Signing out...');
-                          
-                          // Call custom sign out endpoint
-                          const response = await fetch('/api/auth/sign-out', {
-                            method: 'POST',
-                            credentials: 'include',
-                          });
-                          
-                          if (!response.ok) {
-                            throw new Error('Sign out failed');
-                          }
-                          
-                          // Clear localStorage and redirect
-                          localStorage.clear();
-                          toast.success('Signed out successfully');
-                          toast.dismiss();
-                          window.location.href = '/new';
-                        } catch (error) {
-                          console.error('Sign out error:', error);
-                          setIsSigningOut(false);
-                          toast.error('Failed to sign out');
-                          // Even if server sign out fails, we've cleared cookies locally
-                          // so we can still redirect
-                          setTimeout(() => {
-                            window.location.href = '/new';
-                          }, 1000);
-                        }
-                      }}
+                  <DropdownMenuItem
+                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  >
+                    {theme === 'dark' ? (
+                      <Sun className="w-3 h-3 mr-2" />
+                    ) : (
+                      <Moon className="w-3 h-3 mr-2" />
+                    )}
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {user ? (
+                    <DropdownMenuItem
+                      onClick={handleSignOut}
                       disabled={isSigningOut}
                     >
                       <LogOut className="w-3 h-3 mr-2" />

@@ -151,7 +151,7 @@ const PanelContent = ({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-neutral-200/60 dark:border-neutral-700/40 flex items-center justify-between bg-oklch(0.98 0.01 240)/80 dark:bg-oklch(0.15 0.05 240)/80 backdrop-blur-md">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/50 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
           <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 tracking-wide">
@@ -171,7 +171,7 @@ const PanelContent = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-transparent to-oklch(0.95 0.02 250)/30 dark:to-oklch(0.12 0.08 250)/30">
+      <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-transparent to-muted/30">
         {/* Searching Stage */}
         <StageIndicator 
           stage="Searching" 
@@ -199,7 +199,7 @@ const PanelContent = ({
         >
           <TooltipProvider>
             <motion.div 
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4 bg-gradient-to-br from-oklch(0.95 0.02 250)/50 to-oklch(0.92 0.015 260)/30 dark:from-oklch(0.12 0.08 250)/30 dark:to-oklch(0.08 0.06 260)/50 rounded-2xl border border-neutral-200/40 dark:border-neutral-700/30 backdrop-blur-sm"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4 bg-gradient-to-br from-muted/60 to-muted/40 rounded-2xl border border-border/40 backdrop-blur-sm"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -303,7 +303,7 @@ export const SourcesPanel = ({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent 
           side="right" 
-          className="w-full sm:w-[350px] bg-gradient-to-b from-oklch(0.98 0.01 240) via-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.15 0.05 240) dark:via-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260) border-l border-neutral-200/80 dark:border-neutral-700/50 p-0"
+          className="w-full sm:w-[350px] bg-background border-l border-border p-0"
         >
           <PanelContent
             sources={sources}
@@ -323,9 +323,9 @@ export const SourcesPanel = ({
     <div
       className={cn(
         'fixed top-0 right-0 h-full z-40 transition-all duration-500 ease-out shadow-2xl shadow-neutral-900/10 dark:shadow-black/30 backdrop-blur-xl',
-        'border-l border-neutral-200/80 dark:border-neutral-700/50',
+        'border-l border-border',
         'w-[400px] lg:w-[450px]',
-        'bg-gradient-to-b from-oklch(0.98 0.01 240) via-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.15 0.05 240) dark:via-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260)',
+        'bg-background',
         open 
           ? 'translate-x-0 opacity-100' 
           : 'translate-x-full opacity-0'
