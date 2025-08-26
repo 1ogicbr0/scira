@@ -47,6 +47,7 @@ import {
   YoutubeIcon,
 } from 'lucide-react';
 import { Memory, Clock as PhosphorClock, RedditLogo, RoadHorizon, XLogo } from '@phosphor-icons/react';
+import { ScrollArea } from '@radix-ui/react-scroll-area';
 
 // Type definitions for YouTube components
 

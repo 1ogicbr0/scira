@@ -212,7 +212,6 @@ const Messages: React.FC<MessagesProps> = React.memo(
                 key={`${messageIndex}-${partIndex}-loading`}
                 className="flex flex-col min-h-[calc(100vh-18rem)] !m-0 !p-0"
               >
-                <OlaLogoHeader />
                 <div className="flex space-x-2 ml-8 mt-2">
                   <div
                     className="w-2 h-2 rounded-full bg-muted-foreground dark:bg-muted-foreground animate-bounce"
@@ -422,14 +421,16 @@ const Messages: React.FC<MessagesProps> = React.memo(
           }
           case 'step-start': {
             const firstStepStartIndex = parts.findIndex((p) => p.type === 'step-start');
-            if (partIndex === firstStepStartIndex) {
-              // Render logo and title for the first step-start
-              return (
-                <div key={`${messageIndex}-${partIndex}-step-start-logo`}>
-                  <OlaLogoHeader />
-                </div>
-              );
-            }
+            
+            // if (partIndex === firstStepStartIndex) {
+            //   // Render logo and title for the first step-start
+            //   return (
+            //     <div key={`${messageIndex}-${partIndex}-step-start-logo`}>
+            //       <OlaLogoHeader />
+            //     </div>
+            //   );
+            // }
+
             // For subsequent step-start parts, render an empty div
             return <div key={`${messageIndex}-${partIndex}-step-start`}></div>;
           }
@@ -504,6 +505,8 @@ const Messages: React.FC<MessagesProps> = React.memo(
 
     return (
       <div className="space-y-0 mb-32 flex flex-col">
+        {/* Show logo header before the first message */}
+        {memoizedMessages.length > 0 && <OlaLogoHeader />}
         <div className="flex-grow">
           {memoizedMessages.map((message, index) => {
             const isNextMessageAssistant =
@@ -564,7 +567,6 @@ const Messages: React.FC<MessagesProps> = React.memo(
         {status === 'submitted' && !hasActiveToolInvocations && (
           <div className="flex items-start min-h-[calc(100vh-18rem)] !m-0 !p-0">
             <div className="w-full !m-0 !p-0">
-              <OlaLogoHeader />
               <div className="flex space-x-2 ml-8 mt-2">
                 <div
                   className="w-2 h-2 rounded-full bg-muted-foreground dark:bg-muted-foreground animate-bounce"
@@ -587,7 +589,6 @@ const Messages: React.FC<MessagesProps> = React.memo(
         {isMissingAssistantResponse && (
           <div className="flex items-start min-h-[calc(100vh-18rem)]">
             <div className="w-full">
-              <OlaLogoHeader />
 
               <div className="bg-secondary/30 dark:bg-secondary/20 border border-secondary dark:border-secondary rounded-lg p-4 mb-4 max-w-2xl">
                 <div className="flex items-start gap-3">

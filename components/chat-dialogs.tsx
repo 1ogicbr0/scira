@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown } from '@phosphor-icons/react';
+import { ArrowSquareOutIcon, Crown } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ChatHistoryDialog } from '@/components/chat-history-dialog';
@@ -149,7 +149,7 @@ export const ApiAnnouncementDialog = React.memo(({ open, onOpenChange }: ApiAnno
               size="sm"
               className="flex-1 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black shadow-sm"
             >
-              <ArrowSquareOut className="h-3 w-3 mr-1.5" />
+              <ArrowSquareOutIcon className="h-3 w-3 mr-1.5" />
               Explore APIs
             </Button>
           </div>

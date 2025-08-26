@@ -94,11 +94,11 @@ const StageIndicator: React.FC<{
       <div className="flex items-center gap-4 mb-4">
         <div className="relative">
           <div className={cn(
-            'w-3 h-3 rounded-full transition-all duration-500 ease-out transform',
+            'w-2.5 h-2.5 rounded-full transition-all duration-500 ease-out transform',
             (isActive && stage === 'Completed') 
               ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-lg shadow-green-500/30 scale-110' 
               : isActive 
-                ? 'bg-gradient-to-r from-orange-400 to-orange-600 shadow-lg shadow-orange-500/30 scale-110 animate-pulse' 
+                ? 'bg-gradient-to-r from-blue-700 to-blue-900 shadow-lg shadow-blue-600/30 scale-110 animate-pulse' 
                 : isComplete 
                   ? 'bg-gradient-to-r from-green-400 to-green-600 shadow-md shadow-green-500/20' 
                   : 'bg-neutral-300 dark:bg-neutral-600'
@@ -106,7 +106,7 @@ const StageIndicator: React.FC<{
           {isActive && (
             <div className={cn(
               'absolute inset-0 rounded-full animate-ping',
-              stage === 'Completed' ? 'bg-green-400' : 'bg-orange-400'
+              stage === 'Completed' ? 'bg-green-400' : 'bg-gradient-to-r from-blue-600 to-black'
             )} style={{ animationDuration: '2s' }} />
           )}
         </div>
@@ -179,7 +179,7 @@ const PanelContent = ({
           isComplete={stage !== 'searching'}
         >
           {stage === 'searching' && (
-            <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-oklch(0.95 0.02 250) to-oklch(0.92 0.015 260) dark:from-oklch(0.12 0.08 250) dark:to-oklch(0.08 0.06 260) rounded-xl border border-blue-200/50 dark:border-blue-800/30 backdrop-blur-sm">
+            <div className="flex items-center gap-4 px-5 py-4 bg-gradient-to-r from-blue-50/60 via-blue-100/40 to-blue-200/60 dark:from-blue-900/15 dark:via-blue-800/10 dark:to-blue-700/15 rounded-xl border border-blue-200/50 dark:border-blue-800/30 backdrop-blur-sm">
               <div className="relative">
                 <Search className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-pulse" />
                 <div className="absolute -inset-1 bg-blue-400 rounded-full opacity-20 animate-ping"></div>

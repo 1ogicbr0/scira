@@ -38,7 +38,7 @@ export function StackOverflowResults({
   if (!results || results.length === 0) {
     return (
       <div className="p-4 text-center text-muted-foreground">
-        No Stack Overflow results found for "{searchQuery}"
+        No Stack Overflow results found for {searchQuery}
       </div>
     );
   }
@@ -85,7 +85,6 @@ export function StackOverflowResults({
       <div className="space-y-4">
         {Object.entries(questionGroups).map(([questionId, group]) => (
           <Card key={questionId} className="border-l-4 border-l-orange-500">
-            {/* Question */}
             {group.question && (
               <CardHeader className="pb-3">
                 <CardTitle className="text-base leading-relaxed flex items-start gap-2">
@@ -262,7 +261,7 @@ export function StackOverflowResults({
       {/* Footer */}
       <div className="text-center pt-4 border-t">
         <p className="text-xs text-muted-foreground">
-          Results from Stack Overflow • {totalResults} total results for "{searchQuery}"
+          Results from Stack Overflow • {totalResults} total results for {searchQuery}
         </p>
       </div>
     </div>

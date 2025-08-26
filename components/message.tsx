@@ -1,5 +1,5 @@
 /* eslint-disable @next/next/no-img-element */
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -520,6 +520,113 @@ export const Message: React.FC<MessageProps> = ({
     [append, setSuggestedQuestions, user, selectedVisibilityType],
   );
 
+  // ... existing code ...
+
+// Move this useMemo to the top level of the component, before any conditional returns
+      const sourcesData = useMemo(() => {
+        if (!onSourcesClick) return null;
+
+        // Extract sources from tool invocations
+        const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
+        const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
+
+        // Check if all tool invocations are complete
+        const allToolInvocationsComplete = toolInvocationParts.length > 0 && 
+          toolInvocationParts.every((part: any) => part.toolInvocation?.state === 'result');
+
+        toolInvocationParts.forEach((part: any) => {
+          const toolInvocation = part.toolInvocation;
+          if (toolInvocation?.state === 'result' && toolInvocation.result) {
+            // Handle extreme search results
+            if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
+              toolInvocation.result.research.sources.forEach((source: any) => {
+                allSources.push({
+                  url: source.url,
+                  title: source.title || new URL(source.url).hostname,
+                  text: source.text || source.content,
+                  favicon: source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`
+                });
+              });
+            }
+            // Handle multi search results
+            else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
+              toolInvocation.result.searches.forEach((search: any) => {
+                search.results?.forEach((result: any) => {
+                  allSources.push({
+                    url: result.url,
+                    title: result.title || new URL(result.url).hostname,
+                    text: result.content || result.text,
+                    favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                  });
+                });
+              });
+            }
+            // Handle web search results
+            else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
+              toolInvocation.result.results.forEach((result: any) => {
+                allSources.push({
+                  url: result.url,
+                  title: result.title || new URL(result.url).hostname,
+                  text: result.content || result.text,
+                  favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                });
+              });
+            }
+            // Handle academic search results
+            else if (toolInvocation.toolName === 'academic_search' && toolInvocation.result.results) {
+              toolInvocation.result.results.forEach((result: any) => {
+                allSources.push({
+                  url: result.url,
+                  title: result.title || new URL(result.url).hostname,
+                  text: result.summary || result.content || result.text,
+                  favicon: `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
+                });
+              });
+            }
+            // Handle YouTube search results
+            else if (toolInvocation.toolName === 'youtube_search' && toolInvocation.result.results) {
+              toolInvocation.result.results.forEach((result: any) => {
+                allSources.push({
+                  url: result.url,
+                  title: result.title || new URL(result.url).hostname,
+                  text: result.summary || result.description || result.content,
+                  favicon: `https://www.google.com/s2/favicons?sz=128&domain=youtube.com`
+                });
+              });
+            }
+            // Handle Reddit search results
+            else if (toolInvocation.toolName === 'reddit_search' && toolInvocation.result.results) {
+              toolInvocation.result.results.forEach((result: any) => {
+                allSources.push({
+                  url: result.url,
+                  title: result.title || new URL(result.url).hostname,
+                  text: result.content || result.text,
+                  favicon: `https://www.google.com/s2/favicons?sz=128&domain=reddit.com`
+                });
+              });
+            }
+            // Handle X/Twitter search results
+            else if (toolInvocation.toolName === 'x_search' && toolInvocation.result.sources) {
+              toolInvocation.result.sources.forEach((source: any) => {
+                allSources.push({
+                  url: source.url,
+                  title: source.title || new URL(source.url).hostname,
+                  text: source.content || source.text,
+                  favicon: `https://www.google.com/s2/favicons?sz=128&domain=x.com`
+                });
+              });
+            }
+          }
+        });
+
+        return {
+          sources: allSources,
+          allToolInvocationsComplete,
+          hasSources: allSources.length > 0
+        };
+      }, [message.parts, onSourcesClick, isLastMessage, message.id]);
+
+
   if (message.role === 'user') {
     // Check if the message has parts that should be rendered
     if (message.parts && Array.isArray(message.parts) && message.parts.length > 0) {
@@ -771,129 +878,36 @@ export const Message: React.FC<MessageProps> = ({
         )}
 
         {/* Sources panel control */}
-        {React.useMemo(() => {
-          if (!onSourcesClick) return null;
-          
-          // Extract sources from tool invocations
-          const toolInvocationParts = message.parts?.filter((part: any) => part.type === 'tool-invocation') || [];
-          const allSources: Array<{ url: string; title: string; text?: string; favicon?: string }> = [];
-          
-          // Check if all tool invocations are complete
-          const allToolInvocationsComplete = toolInvocationParts.length > 0 && 
-            toolInvocationParts.every((part: any) => part.toolInvocation?.state === 'result');
-          
-          toolInvocationParts.forEach((part: any) => {
-            const toolInvocation = part.toolInvocation;
-            if (toolInvocation?.state === 'result' && toolInvocation.result) {
-              // Handle extreme search results
-              if (toolInvocation.toolName === 'extreme_search' && toolInvocation.result.research?.sources) {
-                toolInvocation.result.research.sources.forEach((source: any) => {
-                  allSources.push({
-                    url: source.url,
-                    title: source.title || new URL(source.url).hostname,
-                    text: source.text || source.content,
-                    favicon: source.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(source.url).hostname)}`
-                  });
-                });
-              }
-              // Handle multi search results
-              else if (toolInvocation.toolName === 'multi_search' && toolInvocation.result.searches) {
-                toolInvocation.result.searches.forEach((search: any) => {
-                  search.results?.forEach((result: any) => {
-                    allSources.push({
-                      url: result.url,
-                      title: result.title || new URL(result.url).hostname,
-                      text: result.content || result.text,
-                      favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
-                    });
-                  });
-                });
-              }
-              // Handle web search results
-              else if (toolInvocation.toolName === 'web_search' && toolInvocation.result.results) {
-                toolInvocation.result.results.forEach((result: any) => {
-                  allSources.push({
-                    url: result.url,
-                    title: result.title || new URL(result.url).hostname,
-                    text: result.content || result.text,
-                    favicon: result.favicon || `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
-                  });
-                });
-              }
-              // Handle academic search results
-              else if (toolInvocation.toolName === 'academic_search' && toolInvocation.result.results) {
-                toolInvocation.result.results.forEach((result: any) => {
-                  allSources.push({
-                    url: result.url,
-                    title: result.title || new URL(result.url).hostname,
-                    text: result.summary || result.content || result.text,
-                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(new URL(result.url).hostname)}`
-                  });
-                });
-              }
-              // Handle YouTube search results
-              else if (toolInvocation.toolName === 'youtube_search' && toolInvocation.result.results) {
-                toolInvocation.result.results.forEach((result: any) => {
-                  allSources.push({
-                    url: result.url,
-                    title: result.title || new URL(result.url).hostname,
-                    text: result.summary || result.description || result.content,
-                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=youtube.com`
-                  });
-                });
-              }
-              // Handle Reddit search results
-              else if (toolInvocation.toolName === 'reddit_search' && toolInvocation.result.results) {
-                toolInvocation.result.results.forEach((result: any) => {
-                  allSources.push({
-                    url: result.url,
-                    title: result.title || new URL(result.url).hostname,
-                    text: result.content || result.text,
-                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=reddit.com`
-                  });
-                });
-              }
-              // Handle X/Twitter search results
-              else if (toolInvocation.toolName === 'x_search' && toolInvocation.result.sources) {
-                toolInvocation.result.sources.forEach((source: any) => {
-                  allSources.push({
-                    url: source.url,
-                    title: source.title || new URL(source.url).hostname,
-                    text: source.content || source.text,
-                    favicon: `https://www.google.com/s2/favicons?sz=128&domain=x.com`
-                  });
-                });
-              }
+        {sourcesData && sourcesData.hasSources && onSourcesClick && (
+          <>
+      {/* Auto-open logic */}
+      {sourcesData.sources.length > 0 && isLastMessage && sourcesData.allToolInvocationsComplete && (
+        // Use useEffect for side effects instead of setTimeout in JSX
+        <AutoOpenSources 
+          sources={sourcesData.sources} 
+          onSourcesClick={onSourcesClick} 
+          messageId={message.id} 
+        />
+      )}
+      
+      {/* Sources button */}
+      <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            if (sourcesData.sources.length > 0) {
+              onSourcesClick(sourcesData.sources, true, message.id);
             }
-          });
-          
-          // Store sources for auto-opening
-          if (allSources.length > 0 && isLastMessage && allToolInvocationsComplete) {
-            // Use setTimeout to ensure the component has rendered
-            setTimeout(() => {
-              onSourcesClick(allSources, false, message.id); // forceOpen = false for auto-open, pass messageId
-            }, 500);
-          }
-          
-          // Return the button if sources exist
-          return allSources.length > 0 ? (
-            <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  if (allSources.length > 0) {
-                    onSourcesClick(allSources, true, message.id); // forceOpen = true for manual clicks, pass messageId
-                  }
-                }}
-                className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                title={`View ${allSources.length} sources`}
-              >
-                <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
-              </Button>
-            </div>
-          ) : null;
-        }, [message.parts, onSourcesClick, isLastMessage, message.id])}
+          }}
+          className="h-10 w-10 rounded-full bg-background/95 dark:bg-background/95 border border-border dark:border-border shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+          title={`View ${sourcesData.sources.length} sources`}
+        >
+          <ChevronLeft className="h-5 w-5 text-muted-foreground dark:text-muted-foreground" />
+        </Button>
+      </div>
+    </>
+  )}
 
 
 
@@ -1508,4 +1522,22 @@ export const AttachmentsBadge = ({ attachments }: { attachments: any[] }) => {
       </Dialog>
     </>
   );
+};
+
+// Add this component at the top of the file
+const AutoOpenSources = ({ sources, onSourcesClick, messageId }: { 
+  sources: Array<{ url: string; title: string; text?: string; favicon?: string }>;
+  onSourcesClick: any;
+  messageId: string;
+}) => {
+  useEffect(() => {
+    // Use setTimeout to ensure the component has rendered
+    const timer = setTimeout(() => {
+      onSourcesClick(sources, false, messageId);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [sources, onSourcesClick, messageId]);
+  
+  return null; // This component doesn't render anything
 };
