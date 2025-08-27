@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { parseAsString, useQueryState } from 'nuqs';
 import { toast } from 'sonner';
+import Typewriter from 'typewriter-effect';
 import { v4 as uuidv4 } from 'uuid';
 
 // Internal app imports
@@ -903,17 +904,48 @@ const ChatInterface = memo(
           <div className={`w-full max-w-[95%] sm:max-w-2xl space-y-6 p-0 mx-auto transition-all duration-300`}>
             {status === 'ready' && messages.length === 0 && (
               <div className="text-center m-0 mb-2">
-                <div className="flex items-center justify-center mb-5">
-                  <Image
-                    src="/ola.chat-logo-invert.png"
-                    alt="Ola"
-                    className="w-32 h-7 sm:w-40 sm:h-9 object-contain"
-                    width={160}
-                    height={36}
-                    unoptimized
-                    quality={100}
-                    priority
-                  />
+                <div className="flex items-center justify-center mb-8">
+                  {isMobile ? (
+                    <div className="flex flex-col items-center justify-center">
+                    <Image
+                      src="/ola.chat-logo-invert.png"
+                      alt="Ola"
+                      className="w-32 h-7 sm:w-40 sm:h-9 object-contain"
+                      width={160}
+                      height={36}
+                      unoptimized
+                      quality={100}
+                      priority
+                    />
+                      <div className="text-xl sm:text-2xl font-semibold text-foreground">
+                       <Typewriter
+                         options={{
+                           strings: ['Hello there, how can I help?', 'I can help you with your most difficult questions.'],
+                           autoStart: true,
+                           loop: true,
+                           delay: 65,
+                           cursor: '|',
+                           deleteSpeed: 10,
+                           pauseFor: 3000,
+                         }}
+                       />
+                     </div>
+                    </div>
+                                     ) : (
+                     <div className="text-2xl sm:text-3xl font-semibold text-foreground">
+                       <Typewriter
+                         options={{
+                           strings: ['Hello there, how can I help?', 'I can help you with your most difficult questions.'],
+                           autoStart: true,
+                           loop: true,
+                           delay: 65,
+                           cursor: '|',
+                           deleteSpeed: 10,
+                           pauseFor: 3000,
+                         }}
+                       />
+                     </div>
+                   )}
                 </div>
               </div>
             )}

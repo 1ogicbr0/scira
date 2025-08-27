@@ -158,7 +158,7 @@ const ModelSwitcher: React.FC<ModelSwitcherProps> = React.memo(
             >
               <CpuIcon className="h-4 w-4" />
               <span className="text-xs font-medium sm:block hidden">{currentModel?.label || 'Select Model'}</span>
-              <ChevronsUpDown className="h-4 w-4 opacity-50" />
+              <ChevronsUpDown className="h-4 w-4 text-foreground" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -822,13 +822,13 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                       ? 'bg-accent text-foreground hover:bg-accent/80'
                       : isDeveloper
                         ? 'text-white hover:from-gray-800 hover:via-gray-900 hover:to-black shadow-lg animate-gradient-x'
-                        : 'text-muted-foreground hover:bg-accent',
+                        : 'text-foreground hover:bg-accent border border-border/50',
                   )}
                 >
                   {selectedGroupData && !isExtreme && !isDeveloper && (
                     <>
                       <selectedGroupData.icon className="h-4 w-4" />
-                      <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                      <ChevronsUpDown className="h-4 w-4 text-foreground" />
                     </>
                   )}
                   {isExtreme && (
@@ -924,7 +924,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
               onClick={handleToggleExtreme}
               className={cn(
                 'flex items-center gap-1.5 px-3 h-6 rounded-md transition-all',
-                isExtreme ? 'bg-accent text-foreground hover:bg-accent/80' : 'text-muted-foreground hover:bg-accent',
+                isExtreme ? 'bg-accent text-foreground hover:bg-accent/80' : 'text-foreground hover:bg-accent hover:text-foreground border border-border/50',
               )}
             >
               <TelescopeIcon className="h-4 w-4" />
@@ -946,7 +946,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
                 'flex items-center gap-1.5 px-3 h-6 rounded-md transition-all relative overflow-hidden',
                 isDeveloper 
                   ? 'text-white shadow-lg animate-gradient-x' 
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  : 'text-foreground hover:bg-accent hover:text-foreground border border-border/50',
               )}
             >
               <Code className="h-4 w-4 z-10" />
@@ -962,7 +962,7 @@ const GroupModeToggle: React.FC<GroupSelectorProps> = React.memo(({ selectedGrou
           <TooltipContent side="bottom">
             <div className="text-center">
               <p className="font-medium">{isDeveloper ? 'Advanced Copilot Mode Active' : 'Advanced Copilot Mode'}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-blue-200">
                 {isDeveloper ? 'Interactive research with terminal' : 'AI-powered coding & research'}
               </p>
             </div>
@@ -1951,19 +1951,19 @@ const FormComponent: React.FC<FormComponentProps> = ({
               clockwise={true}
               as="div"
             >
-              <div className="relative rounded-xl bg-muted group">
+              <div className={cn("relative rounded-xl group", isRecording ? "bg-gradient-to-br from-slate-900/98 via-gray-950/95 to-black/98 backdrop-blur-sm border border-slate-500/40 animate-pulse shadow-xl" : "bg-muted")}>
               {isRecording ? (
                 <Textarea
                   ref={inputRef}
                   placeholder=""
-                  value="◉ Recording..."
+                  value="🎤 Recording in progress..."
                   disabled={true}
                   className={cn(
                     'w-full rounded-xl rounded-b-none md:text-base!',
                     'text-base leading-relaxed',
-                    'bg-muted',
+                    'bg-transparent',
                     'border-0!',
-                    'text-muted-foreground',
+                    'text-white font-medium',
                     'focus:ring-0! focus-visible:ring-0!',
                     'px-4! py-4!',
                     'touch-manipulation',
@@ -2091,7 +2091,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       >
                         <div className="flex flex-col gap-0.5">
                           <span className="font-medium text-[11px]">Attach File</span>
-                          <span className="text-[10px] text-accent leading-tight">
+                          <span className="text-[10px] text-blue-200 leading-tight">
                             {hasPdfSupport(selectedModel) ? 'Upload an image or PDF document' : 'Upload an image'}
                           </span>
                         </div>
@@ -2124,7 +2124,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                     >
                       <div className="flex flex-col gap-0.5">
                         <span className="font-medium text-[11px]">Export Research</span>
-                        <span className="text-[10px] text-accent leading-tight">
+                        <span className="text-[10px] text-blue-200 leading-tight">
                           Export research as PDF or Word
                         </span>
                       </div>
@@ -2161,9 +2161,9 @@ const FormComponent: React.FC<FormComponentProps> = ({
                       <TooltipTrigger asChild>
                         <button
                           className={cn(
-                            'group rounded-lg p-1.5 size-7.5 transition-colors duration-200',
+                            'group rounded-lg p-1.5 size-7.5 transition-all duration-200',
                             isRecording
-                              ? 'border border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                              ? 'border border-red-600 bg-gradient-to-br from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 shadow-lg animate-pulse'
                               : 'border border-primary bg-primary text-primary-foreground hover:bg-primary/90',
                           )}
                           onClick={(event) => {
@@ -2186,7 +2186,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
                           <span className="font-medium text-[11px]">
                             {isRecording ? 'Stop Recording' : 'Voice Input'}
                           </span>
-                          <span className="text-[10px] text-accent leading-tight">
+                          <span className="text-[10px] text-blue-200 leading-tight">
                             {isRecording ? 'Click to stop recording' : 'Record your voice message'}
                           </span>
                         </div>
