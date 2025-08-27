@@ -31,6 +31,59 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAppSession } from '@/lib/session-context';
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient';
 
+// Web Speech API types
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  addEventListener(type: 'result', listener: (event: SpeechRecognitionEvent) => void): void;
+  addEventListener(type: 'error', listener: (event: SpeechRecognitionErrorEvent) => void): void;
+  addEventListener(type: 'end', listener: () => void): void;
+  addEventListener(type: 'start', listener: () => void): void;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+declare var SpeechRecognition: {
+  prototype: SpeechRecognition;
+  new (): SpeechRecognition;
+};
+
 interface ModelSwitcherProps {
   selectedModel: string;
   setSelectedModel: (value: string) => void;
@@ -1006,7 +1059,7 @@ const FormComponent: React.FC<FormComponentProps> = ({
   const [isDragging, setIsDragging] = useState(false);
 
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const isProUser = useMemo(
     () => user?.isProUser || (subscriptionData?.hasSubscription && subscriptionData?.subscription?.status === 'active'),
@@ -1017,21 +1070,19 @@ const FormComponent: React.FC<FormComponentProps> = ({
 
   const hasInteracted = useMemo(() => messages.length > 0, [messages.length]);
 
-  const cleanupMediaRecorder = useCallback(() => {
-    if (mediaRecorderRef.current?.stream) {
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+  const cleanupSpeechRecognition = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
-    mediaRecorderRef.current = null;
     setIsRecording(false);
   }, []);
 
   useEffect(() => {
-    isMounted.current = true;
     return () => {
-      isMounted.current = false;
-      cleanupMediaRecorder();
+      cleanupSpeechRecognition();
     };
-  }, [cleanupMediaRecorder]);
+  }, [cleanupSpeechRecognition]);
 
   // Global typing detection to auto-focus form
   useEffect(() => {
@@ -1090,58 +1141,97 @@ const FormComponent: React.FC<FormComponentProps> = ({
   }, [isRecording, input, setInput]);
 
   const handleRecord = useCallback(async () => {
-    if (isRecording && mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      cleanupMediaRecorder();
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      cleanupSpeechRecognition();
     } else {
       try {
+        // Check browser compatibility
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+          toast.error('Speech recognition is not supported in this browser. Please try Chrome, Firefox, or Safari.');
+          return;
+        }
+
+        // Request microphone permission
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
+        
+        // Create and configure speech recognition
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+        
+        recognitionRef.current = recognition;
 
-        recorder.addEventListener('dataavailable', async (event) => {
-          if (event.data.size > 0) {
-            const audioBlob = event.data;
-
-            try {
-              const formData = new FormData();
-              formData.append('audio', audioBlob, 'recording.webm');
-              const response = await fetch('/api/transcribe', {
-                method: 'POST',
-                body: formData,
-              });
-
-              if (!response.ok) {
-                throw new Error(`Transcription failed: ${response.statusText}`);
-              }
-
-              const data = await response.json();
-
-              if (data.text) {
-                setInput(data.text);
-              } else {
-                console.error('Transcription response did not contain text:', data);
-              }
-            } catch (error) {
-              console.error('Error during transcription request:', error);
-            } finally {
-              cleanupMediaRecorder();
+        recognition.addEventListener('result', (event: SpeechRecognitionEvent) => {
+          let interimText = '';
+          let finalText = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalText += transcript;
+            } else {
+              interimText += transcript;
             }
+          }
+          
+          // Update input with final text only (avoid duplicates)
+          if (finalText) {
+            setInput(input + finalText);
           }
         });
 
-        recorder.addEventListener('stop', () => {
-          stream.getTracks().forEach((track) => track.stop());
+        recognition.addEventListener('error', (event: SpeechRecognitionErrorEvent) => {
+          console.error('Speech recognition error:', event.error);
+          
+          let errorMessage = 'Speech recognition error occurred.';
+          switch (event.error) {
+            case 'no-speech':
+              errorMessage = 'No speech detected. Please try again.';
+              break;
+            case 'audio-capture':
+              errorMessage = 'Microphone not available.';
+              break;
+            case 'not-allowed':
+              errorMessage = 'Microphone permission denied.';
+              break;
+            case 'network':
+              errorMessage = 'Network error during speech recognition.';
+              break;
+          }
+          
+          toast.error(errorMessage);
+          cleanupSpeechRecognition();
         });
 
-        recorder.start();
+        recognition.addEventListener('end', () => {
+          stream.getTracks().forEach((track) => track.stop());
+          cleanupSpeechRecognition();
+        });
+
+        recognition.start();
         setIsRecording(true);
+        
       } catch (error) {
         console.error('Error accessing microphone:', error);
         setIsRecording(false);
+        
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            toast.error('Microphone permission denied. Please allow microphone access to use voice input.');
+          } else if (error.name === 'NotFoundError') {
+            toast.error('No microphone found. Please check your audio settings.');
+          } else {
+            toast.error('Failed to start voice input. Please try again.');
+          }
+        }
       }
     }
-  }, [isRecording, cleanupMediaRecorder, setInput]);
+  }, [isRecording, cleanupSpeechRecognition, setInput]);
 
   const handleInput = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
