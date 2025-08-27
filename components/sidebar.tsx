@@ -169,7 +169,7 @@ export function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAppSession();
+  const { user } = useAppSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -186,13 +186,37 @@ export function Sidebar({
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
-      router.push('/');
+      // Clear all cookies immediately when sign out is clicked
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      toast.loading('Signing out...');
+      
+      // Call custom sign out endpoint
+      const response = await fetch('/api/auth/sign-out', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Sign out failed');
+      }
+      
+      // Clear localStorage and redirect
+      localStorage.clear();
+      toast.success('Signed out successfully');
+      toast.dismiss();
+      window.location.href = '/new';
     } catch (error) {
-      console.error('Error signing out:', error);
-      toast.error('Failed to sign out');
-    } finally {
+      console.error('Sign out error:', error);
       setIsSigningOut(false);
+      toast.error('Failed to sign out');
+      // Even if server sign out fails, we've cleared cookies locally
+      // so we can still redirect
+      setTimeout(() => {
+        window.location.href = '/new';
+      }, 1000);
     }
   };
 
