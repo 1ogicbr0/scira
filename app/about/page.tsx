@@ -206,16 +206,15 @@ export default function AboutPage() {
       {/* Navigation */}
       <header className="sticky top-0 z-50 backdrop-blur-lg bg-background/80 border-b border-border">
         <div className="container max-w-screen-xl mx-auto py-4 px-4 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center">
             <Image
-              src="/ola.png"
+              src="/ola.chat-logo-invert.png"
               alt="Ola"
-              width={100}
-              height={100}
-              className="size-7 invert dark:invert-0"
+              width={80}
+              height={20}
+              className="w-20 h-5 object-contain"
               quality={100}
             />
-            <span className="font-normal font-be-vietnam-pro">Ola</span>
           </Link>
 
           <nav className="flex items-center gap-8">
@@ -250,18 +249,17 @@ export default function AboutPage() {
           <motion.div className="space-y-20 text-center" variants={container} initial="hidden" animate="show">
             {/* Logo & Brand */}
             <motion.div variants={item} className="space-y-8">
-              <Link href="/" className="inline-flex items-center gap-2 group">
+              <Link href="/" className="inline-flex items-center group">
                 <div className="relative">
                   <Image
-                    src="/ola.png"
-                    alt="Scira"
-                    width={100}
-                    height={100}
-                    className="size-16 invert dark:invert-0 transition-all duration-300 group-hover:scale-110"
+                    src="/ola.chat-logo-invert.png"
+                    alt="Ola"
+                    width={160}
+                    height={40}
+                    className="w-40 h-10 object-contain transition-all duration-300 group-hover:scale-110"
                     quality={100}
                   />
                 </div>
-                <span className="text-5xl font-light tracking-tight font-be-vietname-pro">ola</span>
               </Link>
 
               <h2 className="text-2xl md:text-3xl font-semibold text-foreground max-w-3xl mx-auto">
@@ -1156,8 +1154,8 @@ export default function AboutPage() {
         <div className="container max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Image src="/scira.png" alt="Scira" width={32} height={32} className="h-8 w-8 invert dark:invert-0" />
-              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Scira. All rights reserved.</p>
+              <Image src="/ola.chat-logo-invert.png" alt="Ola" width={60} height={15} className="w-15 h-4 object-contain" />
+              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Ola. All rights reserved.</p>
             </div>
 
             <div className="flex items-center gap-6">

@@ -38,6 +38,7 @@ import { useProUserStatus } from '@/hooks/use-user-data';
 import { extractResearchData, exportToPDF, exportToWord } from '@/lib/export-utils';
 import { useOptimizedScroll } from '@/hooks/use-optimized-scroll';
 import { useChatThreads } from '@/hooks/use-chat-threads';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Utility and type imports
 import { SEARCH_LIMITS } from '@/lib/constants';
@@ -616,8 +617,9 @@ const ChatInterface = memo(
       [chatId],
     );
 
+    const isMobile = useIsMobile();
     const [sourcesOpen, setSourcesOpen] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true); // Open by default on desktop
+    const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed to avoid hydration issues
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     
     // Use the chat threads hook
@@ -688,6 +690,13 @@ const ChatInterface = memo(
         }
       }
     }, [status, userClosedSources, selectedGroup]);
+
+    // Set sidebar state based on mobile detection
+    useEffect(() => {
+      if (isMobile !== undefined) {
+        setSidebarOpen(!isMobile); // Closed on mobile, open on desktop
+      }
+    }, [isMobile]);
 
     // Handle initialChatId changes (when navigating to a specific thread)
     useEffect(() => {
@@ -894,20 +903,17 @@ const ChatInterface = memo(
           <div className={`w-full max-w-[95%] sm:max-w-2xl space-y-6 p-0 mx-auto transition-all duration-300`}>
             {status === 'ready' && messages.length === 0 && (
               <div className="text-center m-0 mb-2">
-                <div className="flex items-center justify-center gap-3 mb-5">
+                <div className="flex items-center justify-center mb-5">
                   <Image
-                    src="/ola.png"
+                    src="/ola.chat-logo-invert.png"
                     alt="Ola"
-                    className="w-7 h-7 sm:w-10 sm:h-11 invert dark:invert-0"
-                    width={80}
-                    height={80}
+                    className="w-32 h-7 sm:w-40 sm:h-9 object-contain"
+                    width={160}
+                    height={36}
                     unoptimized
                     quality={100}
                     priority
                   />
-                  <h1 className="text-3xl sm:text-5xl !mb-0 text-foreground dark:text-foreground font-be-vietnam-pro! font-light tracking-tighter">
-                    ola
-                  </h1>
                 </div>
               </div>
             )}

@@ -41,18 +41,17 @@ interface MessagesProps {
 }
 
 const OlaLogoHeader = () => (
-  <div className="flex items-center gap-2 my-1.5">
+  <div className="flex">
     <Image
-      src="/ola.png"
+      src="/ola.chat-logo-invert.png"
       alt="Ola"
-      className="size-7 invert dark:invert-0"
+      className="w-25 h-10 object-contain"
       width={100}
-      height={100}
+      height={50}
       unoptimized
       quality={100}
       priority
     />
-    <h2 className="text-xl font-normal font-be-vietnam-pro text-foreground dark:text-foreground">ola</h2>
   </div>
 );
 
@@ -504,7 +503,7 @@ const Messages: React.FC<MessagesProps> = React.memo(
     }
 
     return (
-      <div className="space-y-0 mb-32 flex flex-col">
+      <div className="space-y-0 mb-0 flex flex-col">
         {/* Show logo header before the first message */}
         {memoizedMessages.length > 0 && <OlaLogoHeader />}
         <div className="flex-grow">

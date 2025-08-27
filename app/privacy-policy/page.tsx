@@ -39,13 +39,13 @@ export default function PrivacyPage() {
             {/* Logo */}
             <motion.div variants={item} className="text-center">
               <Link href="/" className="inline-flex items-center gap-3 font-be-vietnam-pro font-bold">
-                <div className="relative w-14 h-14 rounded-full bg-background/90 shadow-sm flex items-center justify-center border">
+                <div className="relative bg-background/90 shadow-sm flex items-center justify-center">
                   <NextImage
-                    src="/scira.png"
-                    alt="Scira Logo"
-                    className="h-8 w-8 opacity-90 invert dark:invert-0"
-                    width={32}
-                    height={32}
+                    src="/ola.chat-logo-invert.png"
+                    alt="Ola Logo"
+                    className="w-24 h-6 object-contain opacity-90"
+                    width={96}
+                    height={24}
                     unoptimized
                     quality={100}
                   />
@@ -203,13 +203,13 @@ export default function PrivacyPage() {
         <div className="container max-w-3xl mx-auto px-4 pt-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-background border flex items-center justify-center">
+              <div className="bg-background border flex items-center justify-center px-2 py-1 rounded">
                 <NextImage
-                  src="/scira.png"
-                  alt="Scira Logo"
-                  className="h-4 w-4 opacity-80 invert dark:invert-0"
-                  width={16}
-                  height={16}
+                  src="/ola.chat-logo-invert.png"
+                  alt="Ola Logo"
+                  className="w-12 h-3 object-contain opacity-80"
+                  width={48}
+                  height={12}
                   unoptimized
                   quality={100}
                 />

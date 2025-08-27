@@ -16,8 +16,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const bgImageData = await fs.promises.readFile(bgImagePath);
     const bgImageBase64 = `data:image/png;base64,${bgImageData.toString('base64')}`;
 
-    // Read the Scira logo
-    const logoPath = path.join(process.cwd(), 'public', 'scira.png');
+    // Read the Ola logo
+    const logoPath = path.join(process.cwd(), 'public', 'ola.chat-logo-invert.png');
     const logoData = await fs.promises.readFile(logoPath);
     const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`;
 

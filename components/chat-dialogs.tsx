@@ -99,7 +99,7 @@ export const ApiAnnouncementDialog = React.memo(({ open, onOpenChange }: ApiAnno
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-white dark:bg-neutral-900 flex items-center justify-center border border-neutral-200 dark:border-neutral-700">
-                <img src="/ola.png" alt="Ola" className="w-5 h-5 object-contain" />
+                <img src="/ola.chat-logo-invert.png" alt="Ola" className="w-6 h-auto object-contain" />
               </div>
               <div>
                 <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-100">
