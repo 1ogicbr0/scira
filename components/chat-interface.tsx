@@ -920,7 +920,7 @@ const ChatInterface = memo(
                       <div className="text-xl sm:text-2xl font-semibold text-foreground">
                        <Typewriter
                          options={{
-                           strings: ['Hello there, how can I help?', 'I can help you with your most difficult questions.'],
+                           strings: ['Hello there, how can I help?', 'Let me know what you need.'],
                            autoStart: true,
                            loop: true,
                            delay: 65,
